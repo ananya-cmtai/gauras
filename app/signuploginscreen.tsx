@@ -47,15 +47,15 @@ const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
 
 
-  // useEffect(() => {
-  //   const checkToken = async () => {
-  //     const token = await AsyncStorage.getItem('userToken');
-  //     if (token) {
-  //       router.replace('/');
-  //     }
-  //   };
-  //   checkToken();
-  // }, []);
+  useEffect(() => {
+    const checkToken = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        router.replace('/(tabs)');
+      }
+    };
+    checkToken();
+  }, []);
 
   // Auto scroll carousel every 3 sec if not focused on input
   useEffect(() => {
@@ -145,7 +145,7 @@ const handleVerifyOTP = async () => {
     if(data.user.phone){
      await AsyncStorage.setItem('currentUserPhone',data.user.phone);
     }
-      router.replace('/');
+      router.replace('/(tabs)');
     } else {
       alert(data.message || 'Invalid OTP');
     }

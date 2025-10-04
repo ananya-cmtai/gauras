@@ -154,16 +154,16 @@ const subscriptionDone = async () => {
    
           openModalAlertFunction("Payment successful \nYour Order has been placed sucessfully!")
         // Alert.alert('Success', 'Payment successful');
-        router.replace('/'); // Navigate to success or home screen
+        router.replace('/(tabs)'); // Navigate to success or home screen
       } else {
         // throw new Error('Failed to deduct from wallet');
           openModalAlertFunction("Please try again!");
-            router.replace('/');
+             router.replace('/(tabs)');
       }
     } catch (err: any) {
       // Alert.alert('Error', err.message || 'Payment failed');
       openModalAlertFunction("Please try again!");
-        router.replace('/');
+         router.replace('/(tabs)');
     } finally {
       setLoading(false);
     }

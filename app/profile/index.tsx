@@ -175,7 +175,7 @@ export default function ProfileScreen() {
     await AsyncStorage.removeItem('userToken');
     await AsyncStorage.removeItem('userEmail');
      await AsyncStorage.removeItem('userId');
-    router.replace('/signuploginscreen'); // or your actual screen path
+    router.replace('/signuploginscreen'); 
   }}
 >
   <Ionicons name="log-out-outline" size={24} color="#EF4444" />
