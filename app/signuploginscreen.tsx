@@ -2,20 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    NativeSyntheticEvent,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TextInputFocusEventData,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -157,13 +155,14 @@ const handleVerifyOTP = async () => {
 };
 
   // When TextInput focus or blur happens
-  const onFocusHandler = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
-    setIsInputFocused(true);
-  };
+const onFocusHandler = () => {
+  setIsInputFocused(true);
+};
 
-  const onBlurHandler = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
-    setIsInputFocused(false);
-  };
+const onBlurHandler = () => {
+  setIsInputFocused(false);
+};
+
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -227,8 +226,8 @@ const handleVerifyOTP = async () => {
                   value={emailOrPhone}
                   onChangeText={setEmailOrPhone}
                   returnKeyType="done"
-                  onFocus={onFocusHandler}
-                  onBlur={onBlurHandler}
+                   onFocus={() => setIsInputFocused(true)}
+  onBlur={() => setIsInputFocused(false)}
                   autoFocus={false}
                 />
              <TouchableOpacity style={styles.button} onPress={handleSendOTP} disabled={isSendingOtp}>
@@ -257,8 +256,8 @@ const handleVerifyOTP = async () => {
                       value={digit}
                       onChangeText={(val) => handleOTPChange(idx, val)}
                       returnKeyType={idx === 5 ? 'done' : 'next'}
-                      onFocus={onFocusHandler}
-                      onBlur={onBlurHandler}
+                     onFocus={() => setIsInputFocused(true)}
+  onBlur={() => setIsInputFocused(false)}
                       onSubmitEditing={() => {
                         if (idx < inputRefs.current.length - 1) {
                           inputRefs.current[idx + 1]?.focus();
