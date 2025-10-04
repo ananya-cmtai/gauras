@@ -11,6 +11,7 @@
     
     },
     "preview": {
+      "shallowClone":false,
       "distribution": "internal",
       "android":{
         "buildType":"apk"
