@@ -1,4 +1,4 @@
-import { useGoogleLogin } from '@/components/socialAuthentication';
+// import { useGoogleLogin } from '@/components/socialAuthentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -27,7 +27,7 @@ const CAROUSEL_IMAGES = [
 
 export default function SignupLoginScreen() {
   const router = useRouter();
-  const { googleLogin } = useGoogleLogin();
+  // const { googleLogin } = useGoogleLogin();
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -155,11 +155,11 @@ const handleVerifyOTP = async () => {
   setIsVerifyingOtp(false);
 };
 
-  const handleGooglelogin = async()=>{
-        const response = await googleLogin(); // Replace with your Google login function
-        console.log(response.data)
+  // const handleGooglelogin = async()=>{
+  //       const response = await googleLogin(); // Replace with your Google login function
+  //       console.log(response.data)
 
-  }
+  // }
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -234,13 +234,13 @@ const handleVerifyOTP = async () => {
     <Text style={styles.buttonText}>Continue</Text>
   )}
 </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={handleGooglelogin} disabled={isSendingOtp}>
+      {/* <TouchableOpacity style={styles.button} onPress={handleGooglelogin} disabled={isSendingOtp}>
   {isSendingOtp ? (
     <ActivityIndicator color="white" />
   ) : (
     <Text style={styles.buttonText}>Continue with Google</Text>
   )}
-</TouchableOpacity>
+</TouchableOpacity> */}
 
               </>
             ) : (
