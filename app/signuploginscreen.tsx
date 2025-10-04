@@ -1,3 +1,4 @@
+import { useGoogleLogin } from '@/components/socialAuthentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -16,7 +17,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 const { width, height } = Dimensions.get('window');
 
 const CAROUSEL_IMAGES = [
@@ -27,7 +27,7 @@ const CAROUSEL_IMAGES = [
 
 export default function SignupLoginScreen() {
   const router = useRouter();
-
+  const { googleLogin } = useGoogleLogin();
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -154,15 +154,11 @@ const handleVerifyOTP = async () => {
   setIsVerifyingOtp(false);
 };
 
-  // When TextInput focus or blur happens
-const onFocusHandler = () => {
-  setIsInputFocused(true);
-};
+  const handleGooglelogin = async()=>{
+        const response = await googleLogin(); // Replace with your Google login function
+        console.log(response.data)
 
-const onBlurHandler = () => {
-  setIsInputFocused(false);
-};
-
+  }
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -235,6 +231,13 @@ const onBlurHandler = () => {
     <ActivityIndicator color="white" />
   ) : (
     <Text style={styles.buttonText}>Continue</Text>
+  )}
+</TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={handleGooglelogin} disabled={isSendingOtp}>
+  {isSendingOtp ? (
+    <ActivityIndicator color="white" />
+  ) : (
+    <Text style={styles.buttonText}>Continue with Google</Text>
   )}
 </TouchableOpacity>
 
