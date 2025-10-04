@@ -42,19 +42,20 @@ const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   const flatListRef = useRef<FlatList>(null);
- const carouselTimer = useRef<number | null>(null);
+const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
 
 
-  useEffect(() => {
-    const checkToken = async () => {
-      const token = await AsyncStorage.getItem('userToken');
-      if (token) {
-        router.replace('/');
-      }
-    };
-    checkToken();
-  }, []);
+
+  // useEffect(() => {
+  //   const checkToken = async () => {
+  //     const token = await AsyncStorage.getItem('userToken');
+  //     if (token) {
+  //       router.replace('/');
+  //     }
+  //   };
+  //   checkToken();
+  // }, []);
 
   // Auto scroll carousel every 3 sec if not focused on input
   useEffect(() => {
