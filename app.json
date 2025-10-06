@@ -9,7 +9,16 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+          "UIBackgroundModes": ["remote-notification"]
+        },
+        "entitlements": {
+          "aps-environment": "development",
+          "com.apple.security.application-groups": [
+            "group.${ios.bundleIdentifier}.onesignal"
+          ]
+        }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,12 +49,13 @@
           }
         }
       ],
+     
       [
-        "@react-native-google-signin/google-signin",{
-          "iosUrlScheme":"com.googleusercontent.apps.780294728867-en6gv616ud5dgkeqds81saoaqutmbau2"
-
-        }
-      ]
+          "onesignal-expo-plugin",
+          {
+            "mode": "development"
+          }
+        ]
     ],
     "experiments": {
       "typedRoutes": true,

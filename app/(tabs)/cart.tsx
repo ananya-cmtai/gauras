@@ -22,14 +22,41 @@ import { removeFromCart, updateCartItem } from '../../redux/cartSlice';
 import { RootState } from '../../redux/store'; // apne store ka sahi path daal dena
 
 export default function CartScreen() {
+  type Coupon = {
+  name: string;
+  discountAmount: number;
+  discountTitle:string // in percentage
+};
+
   const dispatch = useDispatch();
  const router=useRouter();
 const [showPaymentModal, setShowPaymentModal] = useState(false);
+const [couponModalVisible, setCouponModalVisible] = useState(false);
+const [claimedCoupon, setClaimedCoupon] = useState<Coupon | null>(null);
+
+const [settings, setSettings] = useState<{ gst: number; deliveryCharge: number; extraCharge: number; coupons: Coupon[] }>({
+  gst: 0,
+  deliveryCharge: 0,
+  extraCharge: 0,
+  coupons: [],
+});
 
 
 const [showAddressModal, setShowAddressModal] = useState(false);
 const [addressInput, setAddressInput] = useState('');
  const cartItems = useSelector((state: RootState) => state.cart.items);
+useEffect(() => {
+  const fetchSettings = async () => {
+    try {
+      const res = await axios.get('https://gauras-backened.vercel.app/api/settings');
+
+      setSettings(res.data);
+    } catch (error) {
+      console.error('Failed to fetch settings:', error);
+    }
+  };
+  fetchSettings();
+}, []);
 
    useEffect(() => {
     const fetchProfile = async () => {
@@ -84,7 +111,23 @@ useEffect(() => {
 
 }, [cartItems]);
 
- 
+ const subtotal = cartItems.reduce(
+  (sum, item) => sum + (item.price || 0) * item.quantityPackets,
+  0
+);
+
+const gstAmount = (subtotal * (settings.gst || 0)) / 100;
+const deliveryCharge = settings.deliveryCharge || 0;
+const extraCharge = settings.extraCharge || 0;
+
+const finalTotal = subtotal + gstAmount + deliveryCharge + extraCharge;
+// coupon discount is percentage off on total after gst and charges
+const discountAmount = claimedCoupon
+  ? ((subtotal * claimedCoupon.discountAmount) / 100)
+  : 0;
+
+const totalAfterDiscount = finalTotal - discountAmount;
+
   const updateQuantity = (productId: string, change: number) => {
     const item = cartItems.find(i => i.productId === productId);
     if (!item) return;
@@ -173,17 +216,70 @@ const total = cartItems.reduce(
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.cartList}
           />
-          
-          <View style={styles.footer}>
-            <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalAmount}>₹{total.toFixed(2)}</Text>
-            </View>
-            <TouchableOpacity style={styles.checkoutButton} onPress={() => setShowAddressModal(true)}
->
-              <Text style={styles.checkoutButtonText}>Add Address</Text>
-            </TouchableOpacity>
-          </View>
+<View style={styles.footer}>
+  <TouchableOpacity onPress={() => setCouponModalVisible(true)}>
+  {claimedCoupon ? (
+    <View style={styles.claimedCouponContainer}>
+      <View>
+        <Text style={styles.couponAppliedText}>Coupon Applied: {claimedCoupon.name}</Text>
+        <Text style={styles.couponDiscountText}>
+          - {claimedCoupon.discountAmount}% (− ₹{discountAmount.toFixed(2)})
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={styles.removeCouponButton}
+        onPress={() => setClaimedCoupon(null)}
+      >
+        <Ionicons name="close-circle" size={22} color="#EF4444" />
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <Text style={styles.applyCouponText}><Ionicons name="pricetag-outline" size={20} color="#0b380e" />
+ Apply a Coupon</Text>
+  )}
+</TouchableOpacity>
+
+  <View style={styles.totalContainer}>
+    <Text style={styles.totalLabel}>Subtotal</Text>
+    <Text style={styles.totalAmount}>₹{subtotal.toFixed(2)}</Text>
+  </View>
+
+  <View style={styles.totalContainer}>
+    <Text style={styles.totalLabel}>GST ({settings.gst}%)</Text>
+    <Text style={styles.totalAmount}>₹{gstAmount.toFixed(2)}</Text>
+  </View>
+
+  <View style={styles.totalContainer}>
+    <Text style={styles.totalLabel}>Delivery Charge</Text>
+    <Text style={styles.totalAmount}>₹{deliveryCharge.toFixed(2)}</Text>
+  </View>
+
+  <View style={styles.totalContainer}>
+    <Text style={styles.totalLabel}>Extra Charge</Text>
+    <Text style={styles.totalAmount}>₹{extraCharge.toFixed(2)}</Text>
+  </View>
+
+<View style={styles.totalContainer}>
+  <Text style={styles.totalLabel}>Discount</Text>
+  <Text style={styles.totalAmount}>- ₹{discountAmount.toFixed(2)}</Text>
+</View>
+
+<View style={[styles.totalContainer, { borderTopWidth: 1, borderTopColor: '#ccc', marginTop: 10, paddingTop: 10 }]}>
+  <Text style={[styles.totalLabel, { fontSize: 20, fontWeight: 'bold' }]}>Total Amount</Text>
+  <Text style={[styles.totalAmount, { fontSize: 20, fontWeight: 'bold' }]}>₹{totalAfterDiscount.toFixed(2)}</Text>
+</View>
+
+
+  <TouchableOpacity
+    style={styles.checkoutButton}
+    onPress={() => setShowAddressModal(true)}
+  >
+    <Text style={styles.checkoutButtonText}>Add Address</Text>
+  </TouchableOpacity>
+ 
+
+</View>
+
         </>
       )}
       <Modal
@@ -201,6 +297,7 @@ const total = cartItems.reduce(
          router.push({
     pathname: '/walletpaymentpage',
     params: {
+         amount:totalAfterDiscount.toFixed(2),
      address:addressInput
     },
   });
@@ -216,6 +313,7 @@ const total = cartItems.reduce(
           router.push({
     pathname: '/razorpaywebview',
     params: {
+      amount:totalAfterDiscount.toFixed(2),
      address:addressInput
     },
   });
@@ -263,6 +361,46 @@ const total = cartItems.reduce(
       >
         <Text style={styles.saveAddressButtonText}>Proceed to Checkout</Text>
       </TouchableOpacity>}
+    </View>
+  </Pressable>
+</Modal>
+<Modal
+  visible={couponModalVisible}
+  animationType="slide"
+  transparent
+  onRequestClose={() => setCouponModalVisible(false)}
+>
+  <Pressable style={styles.modalOverlay} onPress={() => setCouponModalVisible(false)}>
+    <View style={styles.couponModalContent}>
+      <Text style={styles.modalTitle}>Available Coupons</Text>
+
+      {settings.coupons.length === 0 ? (
+        <Text style={{textAlign:'center', marginVertical: 20}}>No coupons available</Text>
+      ) : (
+        settings.coupons.map((coupon) => {
+          const isClaimed = claimedCoupon?.name === coupon.name;
+          return (
+            <View key={coupon.name} style={styles.couponItem}>
+              <View>
+                <Text style={styles.couponName}>{coupon.name}</Text>
+                <Text style={styles.couponDiscount}>{coupon.discountAmount}% off</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.couponButton, isClaimed ? styles.couponRemoveButton : styles.couponClaimButton]}
+                onPress={() => {
+                  if (isClaimed) {
+                    setClaimedCoupon(null);  // Remove coupon
+                  } else {
+                    setClaimedCoupon(coupon); // Claim coupon
+                  }
+                }}
+              >
+                <Text style={styles.couponButtonText}>{isClaimed ? 'Remove' : 'Claim'}</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })
+      )}
     </View>
   </Pressable>
 </Modal>
@@ -366,15 +504,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 8,
   },
   totalLabel: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
   },
   totalAmount: {
-    fontSize: 24,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#0b380e',
   },
@@ -510,6 +648,109 @@ saveAddressButtonText: {
   color: '#fff',
   fontSize: 16,
   fontWeight: '700',
+},
+applyCouponButton: {
+  backgroundColor: '#0b380e',
+  paddingVertical: 12,
+  marginHorizontal: 20,
+  borderRadius: 12,
+  marginBottom: 16,
+  alignItems: 'center',
+},
+applyCouponButtonText: {
+  color: '#fff',
+  fontWeight: '700',
+  fontSize: 16,
+},
+
+couponModalContent: {
+  backgroundColor: '#fff',
+  paddingVertical: 24,
+  paddingHorizontal: 20,
+  borderTopLeftRadius: 20,
+  borderTopRightRadius: 20,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: -2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 6,
+  elevation: 10,
+  maxHeight: '60%',
+},
+
+couponItem: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingVertical: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: '#eee',
+},
+
+couponName: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#1F2937',
+},
+
+couponDiscount: {
+  fontSize: 14,
+  color: '#4B5563',
+},
+
+couponButton: {
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  borderRadius: 20,
+},
+
+couponClaimButton: {
+  backgroundColor: '#0b380e',
+},
+
+couponRemoveButton: {
+  backgroundColor: '#EF4444',
+},
+
+couponButtonText: {
+  color: '#fff',
+  fontWeight: '700',
+  fontSize: 14,
+},
+claimedCouponContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  backgroundColor: '#E0F7EC',
+  borderRadius: 10,
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  marginHorizontal: 20,
+  marginBottom: 12,
+},
+
+couponAppliedText: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#0b380e',
+},
+
+couponDiscountText: {
+  fontSize: 14,
+  color: '#10B981',
+  marginTop: 4,
+},
+
+removeCouponButton: {
+  marginLeft: 10,
+  padding: 4,
+},
+
+applyCouponText: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#0b380e',
+  marginHorizontal: 20,
+  marginBottom: 12,
 },
 
 });

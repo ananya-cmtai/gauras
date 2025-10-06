@@ -12,14 +12,13 @@ const WalletPaymentPage: React.FC = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-const { address } = useLocalSearchParams();
+const { address,amount } = useLocalSearchParams();
+const numericAmount = Number(amount);
+
 const safeAddress: string = typeof address === 'string' ? address : '';
 
     const cartItems = useSelector((state: RootState) => state.cart.items);
-    const amountPay = cartItems.reduce(
-    (sum, item) => sum + (item.price || 0) * item.quantityPackets, 
-    0
-  );
+  
   const [descriptionText,setDescriptionText]=useState("");
     const [messageAlert, setMessageAlert] = useState<string>('');
     const [openModalAlert, setOpenModalAlert] = useState<boolean>(false);
@@ -30,7 +29,7 @@ const safeAddress: string = typeof address === 'string' ? address : '';
     };
  
 
-  const numericAmount = amountPay;
+  
 
   // Fetch wallet balance from your backend
   useEffect(() => {

@@ -1,21 +1,21 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
   ActivityIndicator,
-  StyleSheet,
   Alert,
   Dimensions,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import ModalAlert from './profile/modelalert'; // Ensure this is a properly typed component
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useDispatch, useSelector } from 'react-redux';
+import { clearCart } from '@/redux/cartSlice';
 import { RootState } from '@/redux/store';
 import axios from 'axios';
-import { clearCart } from '@/redux/cartSlice';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { NativeStackScreenProps } from 'react-native-screens/lib/typescript/native-stack/types';
+import { useDispatch, useSelector } from 'react-redux';
 const { height: screenHeight } = Dimensions.get('window');
  const router =useRouter();
 type PaymentResponse = {
@@ -38,7 +38,9 @@ type Props = NativeStackScreenProps<any, any> & {
 
 const RazorpayWebView: React.FC<Props> = () => {
  
-  const { address } = useLocalSearchParams();
+  const { address,amount } = useLocalSearchParams();
+  const numericAmount = Number(amount);
+
   const [email, setEmail] = useState<string>('');
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
@@ -55,10 +57,7 @@ const RazorpayWebView: React.FC<Props> = () => {
     setMessageAlert(value);
   };
     const cartItems = useSelector((state: RootState) => state.cart.items);
-const amount = cartItems.reduce(
-  (sum, item) => sum + (item.price || 0) * item.quantityPackets,
-  0
-);
+
 
 
   // 🔐 Fetch token once
@@ -269,7 +268,7 @@ const handleMessage = async (event: WebViewMessageEvent) => {
               if (typeof Razorpay !== "undefined") {
                 var options = {
                   "key": "rzp_test_h7fC45pYvbeKRH",
-                  "amount": "${amount * 100}",
+                  "amount": "${numericAmount * 100}",
                   "currency": "INR",
                   "order_id": "${order.id}",
                   "name": "Milan Juice",

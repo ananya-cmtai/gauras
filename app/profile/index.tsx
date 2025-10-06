@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -66,6 +67,7 @@ export default function ProfileScreen() {
     email: '',
     phone: '',
     address: '',
+    referCode: '',
   });
   useEffect(()=>{
       const fetchProfile = async () => {
@@ -80,6 +82,8 @@ export default function ProfileScreen() {
         email: email || '',
         phone: phone || '',
         address: '',
+        referCode:''
+    
       });
   } catch (error) {
         // console.error('Failed to fetch profile:', error);
@@ -120,6 +124,7 @@ export default function ProfileScreen() {
           email: user.email || '',
           phone: user.phone || '',
           address: user.address || '',
+          referCode :user.referCode
         });
       } catch (error) {
         // console.error('Failed to fetch profile:', error);
@@ -145,6 +150,24 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+{/* Referral Code Section */}
+<View style={styles.referralContainer}>
+  <Text style={styles.referralLabel}>Your Referral Code:</Text>
+  <View style={styles.referralCodeBox}>
+    <Text style={styles.referralCodeText}>{profile.referCode || 'N/A'}</Text>
+    <TouchableOpacity
+      style={styles.copyButton}
+      onPress={async () => {
+        if (profile.referCode) {
+          await Clipboard.setStringAsync(profile.referCode);
+          Alert.alert('Copied!', 'Referral code copied to clipboard.');
+        }
+      }}
+    >
+      <Ionicons name="copy-outline" size={20} color="#0b380e" />
+    </TouchableOpacity>
+  </View>
+</View>
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
@@ -271,4 +294,34 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     marginLeft: 8,
   },
+  referralContainer: {
+  paddingHorizontal: 20,
+  paddingVertical: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: '#F3F4F6',
+  backgroundColor: '#f9fafb',
+  marginBottom: 12,
+},
+referralLabel: {
+  fontSize: 16,
+  color: '#4B5563',
+  marginBottom: 6,
+},
+referralCodeBox: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: '#E5E7EB',
+  padding: 12,
+  borderRadius: 8,
+},
+referralCodeText: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#111827',
+},
+copyButton: {
+  padding: 6,
+},
+
 });
