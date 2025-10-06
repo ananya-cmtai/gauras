@@ -1,9 +1,14 @@
 // import { useGoogleLogin } from '@/components/socialAuthentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  GoogleSignin,
+  isSuccessResponse
+} from '@react-native-google-signin/google-signin';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -155,11 +160,19 @@ const handleVerifyOTP = async () => {
   setIsVerifyingOtp(false);
 };
 
-  // const handleGooglelogin = async()=>{
-  //       const response = await googleLogin(); // Replace with your Google login function
-  //       console.log(response.data)
+  const handleGoogleSignIn = async()=>{
+    try{
+        await GoogleSignin.hasPlayServices(); 
+        const response = await GoogleSignin.signIn();
+        if(isSuccessResponse(response)){
+        console.log(response.data);
+        }else{
+          Alert.alert("Google SihnIn was cancelled");
+        }}catch(error){
+          console.error(error);
+        }
 
-  // }
+  }
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -234,13 +247,13 @@ const handleVerifyOTP = async () => {
     <Text style={styles.buttonText}>Continue</Text>
   )}
 </TouchableOpacity>
-      {/* <TouchableOpacity style={styles.button} onPress={handleGooglelogin} disabled={isSendingOtp}>
+      <TouchableOpacity style={styles.button} onPress={handleGoogleSignIn} disabled={isSendingOtp}>
   {isSendingOtp ? (
     <ActivityIndicator color="white" />
   ) : (
     <Text style={styles.buttonText}>Continue with Google</Text>
   )}
-</TouchableOpacity> */}
+</TouchableOpacity>
 
               </>
             ) : (
