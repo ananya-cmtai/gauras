@@ -11,6 +11,9 @@
       "ios": {
         "simulator": false,
         "autoIncrement": true
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "preview": {

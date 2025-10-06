@@ -1,20 +1,34 @@
 // app/_layout.tsx
 
+import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { LogLevel, OneSignal } from 'react-native-onesignal';
+
 import { Provider } from 'react-redux';
 import { store } from '../redux/store';
 export default function RootLayout() {
  useEffect(() => {
-    // Enable verbose logging for debugging (remove in production)
-    OneSignal.Debug.setLogLevel(LogLevel.Verbose);
-    // Initialize with your OneSignal App ID
-    OneSignal.initialize('b89d1dd3-2345-42e3-8b9e-745d49029c4a');
-    // Use this method to prompt for push notifications.
-    // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
-    OneSignal.Notifications.requestPermission(false);
+    // Request notification permissions when the app loads
+    const requestNotificationPermission = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status === 'granted') {
+        console.log('Notification permissions granted!');
+      } else {
+        console.log('Notification permissions denied!');
+      }
+    };
+
+    requestNotificationPermission();
+
+    // Optional: Subscribe to notification events if needed
+    const subscription = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('Notification received:', notification);
+    });
+
+    // Clean up the subscription when the component is unmounted
+    return () => subscription.remove();
   }, []); 
+
   return (
     <Provider store={store}>
       <Stack  screenOptions={{ headerShown: false }}>
