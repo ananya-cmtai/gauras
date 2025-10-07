@@ -144,7 +144,7 @@ useEffect(() => {
     }
     setIsSendingOtp(true);
     try {
-      const response = await fetch('http://192.168.1.6:5000/api/users/send-otp', {
+      const response = await fetch('https://gauras-backened.vercel.app/api/users/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailOrPhone }),
@@ -169,7 +169,7 @@ useEffect(() => {
   }
   setIsVerifyingOtp(true);
   try {
-    const response = await fetch('http://192.168.1.6:5000/api/users/verify-otp', {
+    const response = await fetch('https://gauras-backened.vercel.app/api/users/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
