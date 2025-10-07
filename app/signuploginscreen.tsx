@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import OneSignal from 'react-native-onesignal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
@@ -45,6 +46,18 @@ const [referralCode, setReferralCode] = useState('');
   const [carouselIndex, setCarouselIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+
+useEffect(() => {
+  (OneSignal as any).setAppId('b89d1dd3-2345-42e3-8b9e-745d49029c4a');
+
+  (OneSignal as any).getDeviceState().then((deviceState: any) => {
+    console.log('Player ID:', deviceState.userId);
+    setPlayerId(deviceState.userId);
+  });
+}, []);
+
+
 
 const [request, response, promptAsync] = Google.useAuthRequest({
   clientId: Platform.select({
@@ -58,15 +71,18 @@ const [request, response, promptAsync] = Google.useAuthRequest({
 });
 
 
-  useEffect(() => {
-    const checkToken = async () => {
-      const token = await AsyncStorage.getItem('userToken');
-      if (token) {
-        router.replace('/(tabs)');
-      }
-    };
-    checkToken();
-  }, []);
+useEffect(() => {
+  const checkToken = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    if (token) {
+      router.replace('/(tabs)');
+    } else {
+      setTimeout(() => router.replace('/signuploginscreen'), 2000);
+    }
+  };
+  checkToken();
+}, []);
+
 
   // Handle Google Sign-In response
   useEffect(() => {
@@ -145,37 +161,43 @@ const [request, response, promptAsync] = Google.useAuthRequest({
     setIsSendingOtp(false);
   };
 
-  const handleVerifyOTP = async () => {
-    const code = otp.join('');
-    if (code.length < 6) {
-      alert('Enter full 6 digit code');
-      return;
+ const handleVerifyOTP = async () => {
+  const code = otp.join('');
+  if (code.length < 6) {
+    alert('Enter full 6 digit code');
+    return;
+  }
+  setIsVerifyingOtp(true);
+  try {
+    const response = await fetch('http://192.168.1.6:5000/api/users/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        email: emailOrPhone, 
+        otp: code,
+        referredBy: referralCode,
+        oneSignalPlayerId: playerId,  // send OneSignal playerId here
+      }),
+    });
+    const data = await response.json();
+
+    if (response.ok) {
+      await AsyncStorage.setItem('userToken', data.token);
+      await AsyncStorage.setItem('userEmail', data.user.email);
+      await AsyncStorage.setItem('userId', data.user._id);
+      if (data.user.name) await AsyncStorage.setItem('currentUserName', data.user.name);
+      if (data.user.email) await AsyncStorage.setItem('currentUserEmail', data.user.email);
+      if (data.user.phone) await AsyncStorage.setItem('currentUserPhone', data.user.phone);
+      router.replace('/(tabs)');
+    } else {
+      alert(data.message || 'Invalid OTP');
     }
-    setIsVerifyingOtp(true);
-    try {
-      const response = await fetch('http://192.168.1.6:5000/api/users/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailOrPhone, otp: code,referredBy: referralCode }),
-      });
-      const data = await response.json();
- 
-      if (response.ok) {
-        await AsyncStorage.setItem('userToken', data.token);
-        await AsyncStorage.setItem('userEmail', data.user.email);
-        await AsyncStorage.setItem('userId', data.user._id);
-        if (data.user.name) await AsyncStorage.setItem('currentUserName', data.user.name);
-        if (data.user.email) await AsyncStorage.setItem('currentUserEmail', data.user.email);
-        if (data.user.phone) await AsyncStorage.setItem('currentUserPhone', data.user.phone);
-        router.replace('/(tabs)');
-      } else {
-        alert(data.message || 'Invalid OTP');
-      }
-    } catch (error) {
-      alert('Error verifying OTP');
-    }
-    setIsVerifyingOtp(false);
-  };
+  } catch (error) {
+    alert('Error verifying OTP');
+  }
+  setIsVerifyingOtp(false);
+};
+
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
