@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import { useRouter } from 'expo-router';
@@ -18,7 +18,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import OneSignal from 'react-native-onesignal';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
@@ -46,16 +48,9 @@ const [referralCode, setReferralCode] = useState('');
   const [carouselIndex, setCarouselIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [playerId, setPlayerId] = useState<string | null>(null);
 
-useEffect(() => {
-  (OneSignal as any).setAppId('b89d1dd3-2345-42e3-8b9e-745d49029c4a');
 
-  (OneSignal as any).getDeviceState().then((deviceState: any) => {
-    console.log('Player ID:', deviceState.userId);
-    setPlayerId(deviceState.userId);
-  });
-}, []);
+
 
 
 
@@ -71,18 +66,27 @@ const [request, response, promptAsync] = Google.useAuthRequest({
 });
 
 
-useEffect(() => {
-  const checkToken = async () => {
-    const token = await AsyncStorage.getItem('userToken');
-    if (token) {
-      router.replace('/(tabs)');
-    } else {
-      setTimeout(() => router.replace('/signuploginscreen'), 2000);
-    }
-  };
-  checkToken();
-}, []);
 
+async function getAndSendFCMToken(){
+  try {
+    const token = await messaging().getToken();
+    console.log('FCM Token:', token);
+    const userId=await AsyncStorage.getItem('userId');
+    // backend me save karne ke liye API call
+    await fetch('https://gauras-backened.vercel.app/api/users/save-fcm-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, fcmToken: token }),
+    });
+
+    // locally bhi store kar sakte ho agar chaho
+    await AsyncStorage.setItem('fcmToken', token);
+  } catch (error) {
+    console.log('Error fetching FCM token:', error);
+  }
+}
 
   // Handle Google Sign-In response
   useEffect(() => {
@@ -95,7 +99,7 @@ useEffect(() => {
           });
           const user = await userInfoResponse.json();
           console.log('Google User Info:', user);
-
+  await getAndSendFCMToken();
           await AsyncStorage.setItem('userToken', access_token);
           // Store other user info if needed
           if(user.email) await AsyncStorage.setItem('currentUserEmail', user.email);
@@ -176,13 +180,14 @@ useEffect(() => {
         email: emailOrPhone, 
         otp: code,
         referredBy: referralCode,
-        oneSignalPlayerId: playerId,  // send OneSignal playerId here
+       
       }),
     });
     const data = await response.json();
 
     if (response.ok) {
       await AsyncStorage.setItem('userToken', data.token);
+        await getAndSendFCMToken();
       await AsyncStorage.setItem('userEmail', data.user.email);
       await AsyncStorage.setItem('userId', data.user._id);
       if (data.user.name) await AsyncStorage.setItem('currentUserName', data.user.name);
@@ -255,6 +260,7 @@ useEffect(() => {
                   style={styles.input}
                   placeholder="Enter Email or Phone"
                   keyboardType="email-address"
+                  placeholderTextColor={"#ccc"}
                   value={emailOrPhone}
                   onChangeText={setEmailOrPhone}
                   returnKeyType="done"

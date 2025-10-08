@@ -1,15 +1,25 @@
 // app/_layout.tsx
 
+import messaging from '@react-native-firebase/messaging';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import OneSignal from 'react-native-onesignal';
-
 import { Provider } from 'react-redux';
 import { store } from '../redux/store';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// Expo notification behavior config
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,  // nayi property
+    shouldShowList: true,    // nayi property
+  }),
+});
 
-const ONESIGNAL_APP_ID = 'b89d1dd3-2345-42e3-8b9e-745d49029c4a';
 
 async function requestNotificationPermission() {
   if (Platform.OS === 'android' && Platform.Version >= 33) {
@@ -18,43 +28,81 @@ async function requestNotificationPermission() {
       alert('Notification permission is required to receive notifications.');
       return false;
     }
+  } else {
+    const authStatus = await messaging().requestPermission();
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    if (!enabled) {
+      alert('Firebase notification permission denied.');
+      return false;
+    }
   }
-  // iOS permissions will be handled by OneSignal's promptForPushNotificationsWithUserResponse
   return true;
 }
 
 export default function RootLayout() {
+    const router = useRouter();
   useEffect(() => {
-    async function setupNotifications() {
+    async function setupFirebaseNotifications() {
       const hasPermission = await requestNotificationPermission();
       if (!hasPermission) return;
 
-      const oneSignal = OneSignal as any;  // Typecast to avoid TS errors
+      // 🔥 Get FCM Token
+      const token = await messaging().getToken();
+      console.log('🔥 Firebase FCM Token:', token);
 
-      oneSignal.setAppId(ONESIGNAL_APP_ID);
-
-      if (Platform.OS === 'ios') {
-        oneSignal.promptForPushNotificationsWithUserResponse();
-      }
-
-      oneSignal.setNotificationOpenedHandler((notification: any) => {
-        console.log('Notification opened:', notification);
+      // 🔹 Foreground message listener
+      const unsubscribeOnMessage = messaging().onMessage(async remoteMessage => {
+        console.log('📩 Foreground Firebase message:', remoteMessage);
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: remoteMessage.notification?.title ?? 'New Message',
+            body: remoteMessage.notification?.body ?? 'You have a new notification',
+          },
+          trigger: null,
+        });
       });
 
-      const subscription = Notifications.addNotificationReceivedListener(notification => {
-        console.log('Expo Notification received:', notification);
+      // 🔹 When app opened from background by tapping a notification
+      const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {
+        console.log('App opened from background by notification:', remoteMessage);
       });
 
-      // Cleanup subscription on unmount
-      return () => subscription.remove();
+      // 🔹 When app opened from quit state
+      messaging()
+        .getInitialNotification()
+        .then(remoteMessage => {
+          if (remoteMessage) {
+            console.log('App opened from quit state by notification:', remoteMessage);
+          }
+        });
+
+      return () => {
+        unsubscribeOnMessage();
+        unsubscribeOpened();
+      };
     }
 
-    setupNotifications();
+    setupFirebaseNotifications();
   }, []);
+useEffect(() => {
+  const checkToken = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    console.log('RootLayout token:', token); // Debug
+    if (token && token.length > 0) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/signuploginscreen');
+    }
+  };
+  checkToken();
+}, []);
+
 
   return (
     <Provider store={store}>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false }} >
         <Stack.Screen name="signuploginscreen" />
         <Stack.Screen name="(tabs)" />
       </Stack>

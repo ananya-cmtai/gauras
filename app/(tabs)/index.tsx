@@ -236,8 +236,8 @@ const renderProduct = ({ item }: { item: Product }) => (
 
 const styles = StyleSheet.create({
   container: {
-    // flex: 1,
-    // height:"100%",
+    flex: 1,
+    height:"100%",
     // backgroundColor: '#0b380e',
   },
 

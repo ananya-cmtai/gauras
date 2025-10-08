@@ -195,9 +195,8 @@ export default function ProfileScreen() {
        <TouchableOpacity
   style={styles.logoutButton}
   onPress={async () => {
-    await AsyncStorage.removeItem('userToken');
-    await AsyncStorage.removeItem('userEmail');
-     await AsyncStorage.removeItem('userId');
+    await AsyncStorage.clear();
+   
     router.replace('/signuploginscreen'); 
   }}
 >
