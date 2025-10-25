@@ -39,7 +39,4 @@ yarn-error.*
 app-example
 
 # generated native folders
-/ios
-/android
-google-services.json
-serviceAccountKey.json
+
