@@ -292,10 +292,18 @@ async function getAndSendFCMToken(){
   )}
 </TouchableOpacity>
 
-
-                <TouchableOpacity style={styles.button} onPress={() => promptAsync()} disabled={!request || isSendingOtp}>
-                  <Text style={styles.buttonText}>Continue with Google</Text>
-                </TouchableOpacity>
+ <TouchableOpacity
+  style={styles.googleButton}
+  onPress={() => promptAsync()}
+  disabled={!request || isSendingOtp}
+  activeOpacity={0.8}
+>
+  <Image
+    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/300/300221.png' }}
+    style={styles.googleIcon}
+  />
+  <Text style={styles.googleButtonText}>Continue with Google</Text>
+</TouchableOpacity>
               </>
             ) : (
               <>
@@ -445,4 +453,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
+    googleButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+  borderRadius: 8,
+  paddingVertical: 14,
+  marginTop: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 2,
+  elevation: 2, // for Android shadow
+},
+googleIcon: {
+  width: 20,
+  height: 20,
+  marginRight: 10,
+},
+googleButtonText: {
+  color: '#000',
+  fontSize: 16,
+  fontWeight: '500',
+},
+
 });
