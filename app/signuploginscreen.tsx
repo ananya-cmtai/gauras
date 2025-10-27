@@ -1,7 +1,3 @@
-
-import { makeRedirectUri } from 'expo-auth-session';
-import * as Google from 'expo-auth-session/providers/google';
-import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,11 +17,16 @@ import {
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+GoogleSignin.configure({
+  webClientId: '306824165737-8t9luqm20c5j03rsvbq4qrvsri2ofpjg.apps.googleusercontent.com',
+  offlineAccess: true,
+});
+
 const { width, height } = Dimensions.get('window');
-const CLIENT_ID_ANDROID ="780294728867-2jsqu484vujqtiosdrtev97a9j24s6l9.apps.googleusercontent.com";
-const CLIENT_ID_EXPO_GO = "780294728867-0jfp89u6r2pneh1747f2c5gjkq5pp5r4.apps.googleusercontent.com";
 const CAROUSEL_IMAGES = [
   "https://www.shutterstock.com/image-photo/dairy-products-bottles-milk-cottage-600nw-2483159649.jpg",
   "https://thumbs.dreamstime.com/b/dairy-products-milk-bottle-various-cheeses-bread-slices-wood-table-cow-stands-background-green-field-blue-sky-organic-farm-384802379.jpg",
@@ -35,7 +36,7 @@ const CAROUSEL_IMAGES = [
 export default function SignupLoginScreen() {
   const router = useRouter();
   const [showReferralInput, setShowReferralInput] = useState(false);
-const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState('');
 
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [emailOrPhone, setEmailOrPhone] = useState('');
@@ -49,71 +50,49 @@ const [referralCode, setReferralCode] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-
-
-
-
-
-const [request, response, promptAsync] = Google.useAuthRequest({
-  clientId: Platform.select({
-    android: CLIENT_ID_ANDROID,
-    default: CLIENT_ID_EXPO_GO,
-  }),
-  redirectUri: makeRedirectUri({
-    scheme: 'gauras', // aapka app scheme
-  }),
-  scopes: ['profile', 'email'],
-});
-
-
-
-async function getAndSendFCMToken(){
-  try {
-    const token = await messaging().getToken();
-    console.log('FCM Token:', token);
-    const userId=await AsyncStorage.getItem('userId');
-    // backend me save karne ke liye API call
-    await fetch('https://gauras-backened.vercel.app/api/users/save-fcm-token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId, fcmToken: token }),
-    });
-
-    // locally bhi store kar sakte ho agar chaho
-    await AsyncStorage.setItem('fcmToken', token);
-  } catch (error) {
-    console.log('Error fetching FCM token:', error);
-  }
-}
-
-  // Handle Google Sign-In response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { access_token } = response.params;
-      (async () => {
-        try {
-          const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-            headers: { Authorization: `Bearer ${access_token}` },
-          });
-          const user = await userInfoResponse.json();
-          console.log('Google User Info:', user);
-  await getAndSendFCMToken();
-          await AsyncStorage.setItem('userToken', access_token);
-          // Store other user info if needed
-          if(user.email) await AsyncStorage.setItem('currentUserEmail', user.email);
-          if(user.name) await AsyncStorage.setItem('currentUserName', user.name);
-
-          router.replace('/(tabs)');
-        } catch (error) {
-          Alert.alert('Failed to fetch user info from Google');
-        }
-      })();
-    } else if (response?.type === 'dismiss') {
-      Alert.alert('Google Sign-In cancelled');
+  async function getAndSendFCMToken(){
+    try {
+      const token = await messaging().getToken();
+      console.log('FCM Token:', token);
+      const userId = await AsyncStorage.getItem('userId');
+      await fetch('https://gauras-backened.vercel.app/api/users/save-fcm-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, fcmToken: token }),
+      });
+      await AsyncStorage.setItem('fcmToken', token);
+    } catch (error) {
+      console.log('Error fetching FCM token:', error);
     }
-  }, [response]);
+  }
+
+  // ---------------- Firebase Google Sign-In ----------------
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+const userInfo = await GoogleSignin.signIn();
+console.log("hello============",userInfo,"userInfo")
+const idToken = (userInfo as any).idToken;
+
+
+// const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+// const userCredential = await auth().signInWithCredential(googleCredential);
+
+//       const user = userCredential.user;
+
+//       await AsyncStorage.setItem('userId', user.uid);
+//       await AsyncStorage.setItem('currentUserName', user.displayName ?? '');
+//       await AsyncStorage.setItem('currentUserEmail', user.email ?? '');
+
+      await getAndSendFCMToken();
+
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.log('Google Sign-In Error:', error);
+      Alert.alert('Google Sign-In failed', String(error));
+    }
+  };
+  // ---------------------------------------------------------
 
   useEffect(() => {
     if (!isInputFocused) {
@@ -142,10 +121,7 @@ async function getAndSendFCMToken(){
   };
 
   const handleSendOTP = async () => {
-    if (!emailOrPhone.trim()) {
-      alert('Please enter email or phone');
-      return;
-    }
+    if (!emailOrPhone.trim()) { alert('Please enter email or phone'); return; }
     setIsSendingOtp(true);
     try {
       const response = await fetch('https://gauras-backened.vercel.app/api/users/send-otp', {
@@ -154,74 +130,47 @@ async function getAndSendFCMToken(){
         body: JSON.stringify({ email: emailOrPhone }),
       });
       const data = await response.json();
-      if (response.ok) {
-        setStep('otp');
-      } else {
-        alert(data.message || 'Failed to send OTP');
-      }
-    } catch (error) {
-      alert('Error sending OTP');
-    }
+      if (response.ok) setStep('otp');
+      else alert(data.message || 'Failed to send OTP');
+    } catch (error) { alert('Error sending OTP'); }
     setIsSendingOtp(false);
   };
 
- const handleVerifyOTP = async () => {
-  const code = otp.join('');
-  if (code.length < 6) {
-    alert('Enter full 6 digit code');
-    return;
-  }
-  setIsVerifyingOtp(true);
-  try {
-    const response = await fetch('https://gauras-backened.vercel.app/api/users/verify-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email: emailOrPhone, 
-        otp: code,
-        referredBy: referralCode,
-       
-      }),
-    });
-    const data = await response.json();
-
-    if (response.ok) {
-      await AsyncStorage.setItem('userToken', data.token);
+  const handleVerifyOTP = async () => {
+    const code = otp.join('');
+    if (code.length < 6) { alert('Enter full 6 digit code'); return; }
+    setIsVerifyingOtp(true);
+    try {
+      const response = await fetch('https://gauras-backened.vercel.app/api/users/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: emailOrPhone, 
+          otp: code,
+          referredBy: referralCode,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        await AsyncStorage.setItem('userToken', data.token);
         await getAndSendFCMToken();
-      await AsyncStorage.setItem('userEmail', data.user.email);
-      await AsyncStorage.setItem('userId', data.user._id);
-      if (data.user.name) await AsyncStorage.setItem('currentUserName', data.user.name);
-      if (data.user.email) await AsyncStorage.setItem('currentUserEmail', data.user.email);
-      if (data.user.phone) await AsyncStorage.setItem('currentUserPhone', data.user.phone);
-      router.replace('/(tabs)');
-    } else {
-      alert(data.message || 'Invalid OTP');
-    }
-  } catch (error) {
-    alert('Error verifying OTP');
-  }
-  setIsVerifyingOtp(false);
-};
-
+        await AsyncStorage.setItem('userEmail', data.user.email);
+        await AsyncStorage.setItem('userId', data.user._id);
+        if (data.user.name) await AsyncStorage.setItem('currentUserName', data.user.name);
+        router.replace('/(tabs)');
+      } else { alert(data.message || 'Invalid OTP'); }
+    } catch (error) { alert('Error verifying OTP'); }
+    setIsVerifyingOtp(false);
+  };
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setCarouselIndex(viewableItems[0].index);
-    }
+    if (viewableItems.length > 0) setCarouselIndex(viewableItems[0].index);
   }).current;
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {!isInputFocused && (
             <>
               <FlatList
@@ -231,23 +180,13 @@ async function getAndSendFCMToken(){
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(_, idx) => idx.toString()}
-                renderItem={({ item }) => (
-                  <Image
-                    source={{ uri: item || 'https://static.toiimg.com/photo/113458714.cms' }}
-                    style={styles.carouselImage}
-                  />
-                )}
+                renderItem={({ item }) => <Image source={{ uri: item }} style={styles.carouselImage} />}
                 style={styles.carousel}
                 onViewableItemsChanged={onViewableItemsChanged}
                 viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
               />
               <View style={styles.dotsContainer}>
-                {CAROUSEL_IMAGES.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[styles.dot, i === carouselIndex ? styles.activeDot : {}]}
-                  />
-                ))}
+                {CAROUSEL_IMAGES.map((_, i) => <View key={i} style={[styles.dot, i === carouselIndex ? styles.activeDot : {}]} />)}
               </View>
             </>
           )}
@@ -266,44 +205,32 @@ async function getAndSendFCMToken(){
                   returnKeyType="done"
                   onFocus={() => setIsInputFocused(true)}
                   onBlur={() => setIsInputFocused(false)}
-                  autoFocus={false}
                 />
-             <TouchableOpacity onPress={() => setShowReferralInput(!showReferralInput)}>
-  <Text style={{ color: '#0b380e', fontWeight: '600', marginBottom: 8, textAlign: 'center',textDecorationLine:"underline",textDecorationStyle:"solid" }}>
-    {showReferralInput ? 'Hide Referral Code' : 'Enter Referral Code'}
-  </Text>
-</TouchableOpacity>
 
-{showReferralInput && (
-  <TextInput
-    style={styles.input}
-    placeholder="Referral Code (optional)"
-    value={referralCode}
-    onChangeText={setReferralCode}
-    autoCapitalize="characters"
-  />
-)}
+                <TouchableOpacity onPress={() => setShowReferralInput(!showReferralInput)}>
+                  <Text style={{ color: '#0b380e', fontWeight: '600', marginBottom: 8, textAlign: 'center', textDecorationLine:"underline" }}>
+                    {showReferralInput ? 'Hide Referral Code' : 'Enter Referral Code'}
+                  </Text>
+                </TouchableOpacity>
 
-<TouchableOpacity style={styles.button} onPress={handleSendOTP} disabled={isSendingOtp}>
-  {isSendingOtp ? (
-    <ActivityIndicator color="white" />
-  ) : (
-    <Text style={styles.buttonText}>Continue</Text>
-  )}
-</TouchableOpacity>
+                {showReferralInput && (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Referral Code (optional)"
+                    value={referralCode}
+                    onChangeText={setReferralCode}
+                    autoCapitalize="characters"
+                  />
+                )}
 
- <TouchableOpacity
-  style={styles.googleButton}
-  onPress={() => promptAsync()}
-  disabled={!request || isSendingOtp}
-  activeOpacity={0.8}
->
-  <Image
-    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/300/300221.png' }}
-    style={styles.googleIcon}
-  />
-  <Text style={styles.googleButtonText}>Continue with Google</Text>
-</TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={handleSendOTP} disabled={isSendingOtp}>
+                  {isSendingOtp ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Continue</Text>}
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn} activeOpacity={0.8}>
+                  <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/300/300221.png' }} style={styles.googleIcon} />
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </TouchableOpacity>
               </>
             ) : (
               <>
@@ -312,9 +239,7 @@ async function getAndSendFCMToken(){
                   {otp.map((digit, idx) => (
                     <TextInput
                       key={idx}
-                      ref={(ref) => {
-                        inputRefs.current[idx] = ref;
-                      }}
+                      ref={(ref) => { inputRefs.current[idx] = ref; }}
                       style={styles.otpBox}
                       keyboardType="number-pad"
                       maxLength={1}
@@ -323,33 +248,17 @@ async function getAndSendFCMToken(){
                       returnKeyType={idx === 5 ? 'done' : 'next'}
                       onFocus={() => setIsInputFocused(true)}
                       onBlur={() => setIsInputFocused(false)}
-                      onSubmitEditing={() => {
-                        if (idx < inputRefs.current.length - 1) {
-                          inputRefs.current[idx + 1]?.focus();
-                        }
-                      }}
                     />
                   ))}
                 </View>
 
                 <TouchableOpacity style={styles.button} onPress={handleVerifyOTP} disabled={isVerifyingOtp}>
-                  {isVerifyingOtp ? (
-                    <ActivityIndicator color="white" />
-                  ) : (
-                    <Text style={styles.buttonText}>Verify OTP</Text>
-                  )}
+                  {isVerifyingOtp ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Verify OTP</Text>}
                 </TouchableOpacity>
 
                 <View style={styles.otpActions}>
-                  <TouchableOpacity onPress={() => setStep('input')}>
-                    <Text style={styles.actionText}>Change Email / Number</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity onPress={handleSendOTP}>
-                    <Text style={[styles.actionText, { color: '#0b380e', fontWeight: '600' }]}>
-                      Resend OTP
-                    </Text>
-                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setStep('input')}><Text style={styles.actionText}>Change Email / Number</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={handleSendOTP}><Text style={[styles.actionText, { color: '#0b380e', fontWeight: '600' }]}>Resend OTP</Text></TouchableOpacity>
                 </View>
               </>
             )}

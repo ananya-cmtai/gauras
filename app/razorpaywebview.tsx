@@ -267,11 +267,11 @@ const handleMessage = async (event: WebViewMessageEvent) => {
             function waitForRazorpay() {
               if (typeof Razorpay !== "undefined") {
                 var options = {
-                  "key": "rzp_test_h7fC45pYvbeKRH",
+                  "key": "rzp_live_RYNXhDJcEf2dUe",
                   "amount": "${numericAmount * 100}",
                   "currency": "INR",
                   "order_id": "${order.id}",
-                  "name": "Milan Juice",
+                  "name": "Gauras",
                   "description": "Order Payment",
                   "handler": function (response) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ status: 'success', response }));

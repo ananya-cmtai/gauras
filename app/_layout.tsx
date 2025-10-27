@@ -1,15 +1,17 @@
 // app/_layout.tsx
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
+
 import * as Notifications from 'expo-notifications';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { Provider } from 'react-redux';
 import { store } from '../redux/store';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-// Expo notification behavior config
+
+
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -43,6 +45,7 @@ async function requestNotificationPermission() {
 
 export default function RootLayout() {
     const router = useRouter();
+    
   useEffect(() => {
     async function setupFirebaseNotifications() {
       const hasPermission = await requestNotificationPermission();

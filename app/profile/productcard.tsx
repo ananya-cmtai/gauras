@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart, removeFromCart, updateCartItem } from '../../redux/cartSlice';
@@ -28,6 +28,9 @@ const ProductCard: React.FC<Props> = ({ item, isTablet }) => {
   const router = useRouter();
   const cartItem = useSelector((state: RootState) =>
     state.cart.items.find((p) => p.productId === item._id)
+  );
+const [selectedQuantity, setSelectedQuantity] = useState<string>(
+    Array.isArray(item.quantity) ? item.quantity[0] : item.quantity
   );
 
   const favourites = useSelector((state: RootState) => state.favourites.items);
@@ -83,6 +86,13 @@ useEffect(() => {
   const isInFavourites = useSelector((state: RootState) =>
     state.favourites.items.some(fav => fav.productId === item._id)
   );
+const getSelectedPrice = () => {
+  if (Array.isArray(item.quantity) && Array.isArray(item.price)) {
+    const index = item.quantity.indexOf(selectedQuantity);
+    return item.price[index] ?? item.price[0];
+  }
+  return Array.isArray(item.price) ? item.price[0] : item.price;
+};
 
   const toggleFavourites = () => {
     if (isInFavourites) {
@@ -105,9 +115,9 @@ useEffect(() => {
       name: item.name,
       imageUrl: item.imageUrl,
    
-      quantity: item.quantity,  // e.g. "500g"
+      quantity: selectedQuantity,  // e.g. "500g"
       quantityPackets: 1,
-      price: item.price,
+      price: getSelectedPrice(),
     }));
   };
 
@@ -121,7 +131,9 @@ useEffect(() => {
 
     }
   };
-
+  const handleSelectQuantity = (q: string) => {
+    setSelectedQuantity(q);
+  };
 
   const handleSubscribe = () => {
   // Convert description array to a JSON string
@@ -186,9 +198,33 @@ useEffect(() => {
       )}
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name || 'Unnamed Product'}</Text>
-        <Text style={styles.productPrice}>₹{item.price ?? '-'}</Text>
-        <Text style={styles.productQuantity}>{item.quantity ?? ''}</Text>
+       <Text style={styles.productPrice}>₹{getSelectedPrice()}</Text>
 
+       {Array.isArray(item.quantity) ? (
+          <View style={styles.quantityContainer}>
+            {item.quantity.map((q: string, index: number) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.quantityOption,
+                  selectedQuantity === q && styles.quantityOptionSelected,
+                ]}
+                onPress={() => handleSelectQuantity(q)}
+              >
+                <Text
+                  style={[
+                    styles.quantityText,
+                    selectedQuantity === q && styles.quantityTextSelected,
+                  ]}
+                >
+                  {q}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.productQuantity}>{item.quantity}</Text>
+        )}
         <View style={styles.productActions}>
           {cartItem ? (
             <>
@@ -304,6 +340,29 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#FFFFFF',
+  }, quantityContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  quantityOption: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  quantityOptionSelected: {
+    backgroundColor: '#0b380e',
+  },
+  quantityText: {
+    fontSize: 12,
+    color: '#374151',
+  },
+  quantityTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 

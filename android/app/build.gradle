@@ -113,14 +113,12 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        release {
-            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
-                storeFile file(MYAPP_UPLOAD_STORE_FILE)
-                storePassword MYAPP_UPLOAD_STORE_PASSWORD
-                keyAlias MYAPP_UPLOAD_KEY_ALIAS
-                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
-            }
-        }
+    release {
+            storeFile file('./gauras-upload-key.jks')
+            storePassword '531a26baf3de50d831fe58b56e9cade0'
+            keyAlias '75f25e0d74bae6df259f56d1e122248f'
+            keyPassword '9384badcf16754403338c767a74143df'
+     }
     }
     buildTypes {
         debug {
@@ -175,7 +173,10 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:33.4.0')
 implementation 'com.google.firebase:firebase-messaging'
 implementation("com.google.firebase:firebase-analytics")
-     
+implementation project(':react-native-screens')
+
+     implementation 'com.google.android.gms:play-services-auth:20.5.0' // or latest
+
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
     def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";

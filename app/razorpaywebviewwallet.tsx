@@ -1,19 +1,17 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
-  Dimensions,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    StyleSheet,
+    View,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import ModalAlert from './profile/modelalert'; // Ensure this is a properly typed component
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
 import axios from 'axios';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { NativeStackScreenProps } from 'react-native-screens/lib/typescript/native-stack/types';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -254,11 +252,11 @@ const handleMessage = async (event: WebViewMessageEvent) => {
             function waitForRazorpay() {
               if (typeof Razorpay !== "undefined") {
                 var options = {
-                  "key": "rzp_test_h7fC45pYvbeKRH",
+                  "key": "rzp_live_RYNXhDJcEf2dUe",
                   "amount": "${amount * 100}",
                   "currency": "INR",
                   "order_id": "${order.id}",
-                  "name": "Milan Juice",
+                  "name": "Gauras",
                   "description": "Order Payment",
                   "handler": function (response) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ status: 'success', response }));
