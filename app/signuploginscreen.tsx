@@ -18,7 +18,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 GoogleSignin.configure({
@@ -27,7 +29,7 @@ GoogleSignin.configure({
 });
 
 const { width, height } = Dimensions.get('window');
-const CAROUSEL_IMAGES = [
+const DEFAULT_CAROUSEL_IMAGES = [
   "https://www.shutterstock.com/image-photo/dairy-products-bottles-milk-cottage-600nw-2483159649.jpg",
   "https://thumbs.dreamstime.com/b/dairy-products-milk-bottle-various-cheeses-bread-slices-wood-table-cow-stands-background-green-field-blue-sky-organic-farm-384802379.jpg",
   "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/DairyProductsGermany.jpg/1200px-DairyProductsGermany.jpg",
@@ -37,7 +39,7 @@ export default function SignupLoginScreen() {
   const router = useRouter();
   const [showReferralInput, setShowReferralInput] = useState(false);
   const [referralCode, setReferralCode] = useState('');
-
+ const [carouselImages, setCarouselImages] = useState<string[]>(DEFAULT_CAROUSEL_IMAGES);
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -49,7 +51,34 @@ export default function SignupLoginScreen() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+useFocusEffect(
+  React.useCallback(() => {
+    const onBackPress = () => true; // block back button
 
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => subscription.remove(); // <- remove using subscription
+  }, [])
+);
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('https://gauras-backened.vercel.app/api/settings');
+        if (!res.ok) throw new Error('Failed to fetch settings');
+        const data = await res.json();
+        if (data?.loginImageUrls?.length) {
+          const urls = data.loginImageUrls.map((item: any) => typeof item === 'string' ? item : item.imageUrl).filter(Boolean);
+          if (urls.length > 0) setCarouselImages(urls);
+        }
+      } catch (err) {
+        console.log('Using default carousel images', err);
+      }
+    };
+    fetchSettings();
+  }, []);
   async function getAndSendFCMToken(){
     try {
       const token = await messaging().getToken();
@@ -94,21 +123,25 @@ const idToken = (userInfo as any).idToken;
   };
   // ---------------------------------------------------------
 
-  useEffect(() => {
-    if (!isInputFocused) {
-      carouselTimer.current = setInterval(() => {
-        setCarouselIndex((prev) => {
-          let nextIndex = prev + 1;
-          if (nextIndex >= CAROUSEL_IMAGES.length) nextIndex = 0;
-          flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-          return nextIndex;
-        });
-      }, 3000);
-    }
-    return () => {
-      if (carouselTimer.current) clearInterval(carouselTimer.current);
-    };
-  }, [isInputFocused]);
+useEffect(() => {
+  if (!isInputFocused && carouselImages.length > 1) { // only if more than 1 image
+    carouselTimer.current = setInterval(() => {
+      setCarouselIndex((prev) => {
+        let nextIndex = prev + 1;
+        if (nextIndex >= carouselImages.length) nextIndex = 0;
+
+        if (flatListRef.current && carouselImages.length > 0) {
+          flatListRef.current.scrollToIndex({ index: nextIndex, animated: true });
+        }
+        return nextIndex;
+      });
+    }, 3000);
+  }
+
+  return () => {
+    if (carouselTimer.current) clearInterval(carouselTimer.current);
+  };
+}, [isInputFocused, carouselImages]);
 
   const handleOTPChange = (index: number, value: string) => {
     if (value.length > 1) return;
@@ -175,7 +208,7 @@ const idToken = (userInfo as any).idToken;
             <>
               <FlatList
                 ref={flatListRef}
-                data={CAROUSEL_IMAGES}
+                data={carouselImages}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
@@ -186,7 +219,7 @@ const idToken = (userInfo as any).idToken;
                 viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
               />
               <View style={styles.dotsContainer}>
-                {CAROUSEL_IMAGES.map((_, i) => <View key={i} style={[styles.dot, i === carouselIndex ? styles.activeDot : {}]} />)}
+                {carouselImages.map((_, i) => <View key={i} style={[styles.dot, i === carouselIndex ? styles.activeDot : {}]} />)}
               </View>
             </>
           )}

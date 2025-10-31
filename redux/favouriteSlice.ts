@@ -6,8 +6,8 @@ export interface FavouriteItem {
   name: string;
   imageUrl: string;
 
-  price:number;
-  quantity:string;
+  price:[number];
+  quantity:[string];
 }
 
 interface FavouritesState {

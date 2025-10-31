@@ -139,21 +139,21 @@ const getSelectedPrice = () => {
   // Convert description array to a JSON string
   const descriptionString = JSON.stringify(item.description);
 
-  router.push({
-    pathname: '/subscriptionpage',
-    params: {
-      productId: item._id,
-      name: item.name,
-      price: item.price.toString(),
-      description: descriptionString,
-      imageUrl:item.imageUrl,
-      quantity:item.quantity,
-      dailyPrice:item.dailyPrice,
-      weeklyPrice:item.weeklyPrice,
-      alternatePrice:item.alternatePrice
-       // Pass the description as a JSON string
-    },
-  });
+ router.push({
+  pathname: '/subscriptionpage',
+  params: {
+    productId: item._id,
+    name: item.name,
+    price: JSON.stringify(item.price),          // 👈 convert to string
+    description: JSON.stringify(item.description),
+    imageUrl: item.imageUrl,
+    quantity: JSON.stringify(item.quantity),    // 👈 convert to string
+    dailyPrice: JSON.stringify(item.dailyPrice), // 👈 convert to string
+    weeklyPrice: JSON.stringify(item.weeklyPrice), // 👈 convert to string
+    alternatePrice: JSON.stringify(item.alternatePrice) // 👈 convert to string
+  },
+});
+
 
   // Optionally show an alert on subscription
   // Alert.alert('Subscribed!', 'You have successfully subscribed.');
@@ -200,31 +200,40 @@ const getSelectedPrice = () => {
         <Text style={styles.productName}>{item.name || 'Unnamed Product'}</Text>
        <Text style={styles.productPrice}>₹{getSelectedPrice()}</Text>
 
-       {Array.isArray(item.quantity) ? (
-          <View style={styles.quantityContainer}>
-            {item.quantity.map((q: string, index: number) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.quantityOption,
-                  selectedQuantity === q && styles.quantityOptionSelected,
-                ]}
-                onPress={() => handleSelectQuantity(q)}
-              >
-                <Text
-                  style={[
-                    styles.quantityText,
-                    selectedQuantity === q && styles.quantityTextSelected,
-                  ]}
-                >
-                  {q}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.productQuantity}>{item.quantity}</Text>
-        )}
+    {Array.isArray(item.quantity) ? (
+  <View style={styles.quantityContainer}>
+    {item.quantity.map((q: string, index: number) => {
+      // Agar product cart me hai aur ye quantity cart me selected quantity se match nahi karti, disable karo
+      const isDisabled = cartItem && cartItem.quantity !== q;
+      const isSelected = selectedQuantity === q;
+
+      return (
+        <TouchableOpacity
+          key={index}
+          style={[
+            styles.quantityOption,
+            isSelected && styles.quantityOptionSelected,
+            isDisabled && { opacity: 0.5 } // Disable look
+          ]}
+          onPress={() => !isDisabled && handleSelectQuantity(q)}
+          disabled={isDisabled} // Disable click
+        >
+          <Text
+            style={[
+              styles.quantityText,
+              isSelected && styles.quantityTextSelected,
+            ]}
+          >
+            {q}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+) : (
+  <Text style={styles.productQuantity}>{item.quantity}</Text>
+)}
+
         <View style={styles.productActions}>
           {cartItem ? (
             <>

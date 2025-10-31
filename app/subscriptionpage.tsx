@@ -18,6 +18,8 @@ const SubscriptionPage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 const [showAddressModal, setShowAddressModal] = useState(false);
 const [addressInput, setAddressInput] = useState('');
+const [selectedQuantityIndex, setSelectedQuantityIndex] = useState(0);
+
    useEffect(() => {
     const fetchProfile = async () => {
       // setLoading(true);
@@ -58,43 +60,57 @@ const [addressInput, setAddressInput] = useState('');
     productId?: string;
   }>();
 
-  const [product, setProduct] = useState<null | {
-    name: string;
-    pricePerLitre: number;
-    descriptionPoints: string[];
-    image: string;
-    packetSize: string;
-    dailyPrice: number;
-    alternatePrice: number;
-    weeklyPrice: number;
-    _id: string;
-  }>(null);
+const [product, setProduct] = useState<null | {
+  name: string;
+  pricePerLitre: number[];       // 👈 now an array
+  descriptionPoints: string[];
+  image: string;
+  packetSize: string[];
+  dailyPrice: number[];
+  alternatePrice: number[];
+  weeklyPrice: number[];
+  _id: string;
+}>(null);
+
 
   useEffect(() => {
     if (name && price && description && imageUrl && quantity && dailyPrice && alternatePrice && weeklyPrice && productId) {
       try {
         const parsedDescription = JSON.parse(description);
-        const parsedPrice = parseFloat(price);
-        const parsedDailyPrice = parseFloat(dailyPrice);
-        const parsedAlternatePrice = parseFloat(alternatePrice);
-        const parsedWeeklyPrice = parseFloat(weeklyPrice);
+const parsedQuantities = JSON.parse(quantity); // array of quantities
+const parsedDailyPrice = JSON.parse(dailyPrice); // array of daily prices
+const parsedAlternatePrice = JSON.parse(alternatePrice); // array of alternate prices
+const parsedWeeklyPrice = JSON.parse(weeklyPrice); // array of weekly prices
+const parsedPrice = JSON.parse(price); // 👈 add this
 
-        setProduct({
-          name: String(name),
-          pricePerLitre: parsedPrice,
-          descriptionPoints: parsedDescription,
-          packetSize: quantity,
-          image: imageUrl,
-          dailyPrice: parsedDailyPrice,
-          alternatePrice: parsedAlternatePrice,
-          weeklyPrice: parsedWeeklyPrice,
-          _id: productId
-        });
+setProduct({
+  name: String(name),
+  pricePerLitre:parsedPrice,
+  descriptionPoints: parsedDescription,
+  packetSize: parsedQuantities,
+  image: imageUrl,
+  dailyPrice: parsedDailyPrice,
+  alternatePrice: parsedAlternatePrice,
+  weeklyPrice: parsedWeeklyPrice,
+  _id: productId
+});
+
       } catch (err) {
         Alert.alert('Error', 'Failed to load product details.');
       }
     }
   }, [name, price, description, imageUrl, quantity, dailyPrice, alternatePrice, weeklyPrice, productId]);
+const getPriceByType = () => {
+  if (!product) return 0;
+
+  switch (subscriptionType) {
+    case 'daily': return product.dailyPrice[selectedQuantityIndex] ?? 0;
+    case 'alternate': return product.alternatePrice[selectedQuantityIndex] ?? 0;
+    case 'weekly': return product.weeklyPrice[selectedQuantityIndex] ?? 0;
+    default: return 0;
+  }
+};
+
 
   const onChangeDate = (event: any, date?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -107,14 +123,7 @@ const [addressInput, setAddressInput] = useState('');
     setSelectedDay(prev => (prev === day ? null : day));
   };
 
-  const getPriceByType = () => {
-    switch (subscriptionType) {
-      case 'daily': return product?.dailyPrice ?? 0;
-      case 'alternate': return product?.alternatePrice ?? 0;
-      case 'weekly': return product?.weeklyPrice ?? 0;
-      default: return 0;
-    }
-  };
+
 
   const handleSubscribe = async () => {
     if (!product) {
@@ -129,15 +138,17 @@ const [addressInput, setAddressInput] = useState('');
 
     const total = getPriceByType() * packetCount;
 
-    const payload = {
-      subscriptionType: subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1),  // Daily / Alternate / Weekly
-      productId: product._id,
-      numberPacket: packetCount,
-      startDate: startDate.toISOString(),
-      address: addressInput,  // you can add input for address
-      total,
-      ...(subscriptionType === 'weekly' && { deliveryDays: selectedDay })  // single string now
-    };
+  const payload = {
+  subscriptionType: subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1),
+  productId: product._id,
+  numberPacket: packetCount,
+  quantity: product.packetSize[selectedQuantityIndex],
+  startDate: startDate.toISOString(),
+  address: addressInput,
+  total,
+  ...(subscriptionType === 'weekly' && { deliveryDays: selectedDay })
+};
+
 router.push({
   pathname: '/razorpaywebviewsubscribe',
   params: {
@@ -162,15 +173,17 @@ router.push({
 
     const total = getPriceByType() * packetCount;
 
-    const payload = {
-      subscriptionType: subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1),  // Daily / Alternate / Weekly
-      productId: product._id,
-      numberPacket: packetCount,
-      startDate: startDate.toISOString(),
-      address: addressInput,  // you can add input for address
-      total,
-      ...(subscriptionType === 'weekly' && { deliveryDays: selectedDay })  // single string now
-    };
+const payload = {
+  subscriptionType: subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1),
+  productId: product._id,
+  numberPacket: packetCount,
+  quantity: product.packetSize[selectedQuantityIndex],
+  startDate: startDate.toISOString(),
+  address: addressInput,
+  total,
+  ...(subscriptionType === 'weekly' && { deliveryDays: selectedDay })
+};
+
 router.push({
   pathname: '/walletsubscribepaymentpage',
   params: {
@@ -198,9 +211,31 @@ router.push({
         <View style={styles.productCard}>
           <Image source={{ uri: product.image  || 'https://static.toiimg.com/photo/113458714.cms' }} style={styles.productImage} />
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>₹{product.pricePerLitre} / Litre</Text>
-          <Text style={styles.packetSize}>{product.packetSize}</Text>
+          {/* <Text style={styles.productPrice}>₹{product.pricePerLitre} / Litre</Text>
+          <Text style={styles.packetSize}>{product.packetSize}</Text> */}
         </View>
+<Text style={styles.subHeaderText}>Select Quantity</Text>
+<View style={styles.quantitySelectContainer}>
+  {product.packetSize.map((size, index) => (
+    <TouchableOpacity
+      key={index}
+      style={[
+        styles.quantityOption,
+        selectedQuantityIndex === index && styles.quantityOptionSelected
+      ]}
+      onPress={() => setSelectedQuantityIndex(index)}
+    >
+      <Text
+        style={[
+          styles.quantityOptionText,
+          selectedQuantityIndex === index && styles.quantityOptionTextSelected
+        ]}
+      >
+        {size}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
         <View style={styles.descriptionBox}>
           {product.descriptionPoints.map((point, index) => (
@@ -227,7 +262,8 @@ router.push({
     <Text style={styles.posterIcon}>🌞</Text>
     <View>
       <Text style={styles.posterTitle}>Daily Subscription</Text>
-      <Text style={styles.posterPrice}>₹{product.dailyPrice} -/-</Text>
+     <Text style={styles.posterPrice}>₹{product.dailyPrice[selectedQuantityIndex]} -/-</Text>
+
     </View>
   </LinearGradient>
 
@@ -241,7 +277,9 @@ router.push({
     <Text style={styles.posterIcon}>📆</Text>
     <View>
       <Text style={styles.posterTitle}>Alternate Day</Text>
-      <Text style={styles.posterPrice}>₹{product.alternatePrice} -/-</Text>
+  <Text style={styles.posterPrice}>₹{product.alternatePrice[selectedQuantityIndex]} -/-</Text>
+
+
     </View>
   </LinearGradient>
 
@@ -255,7 +293,7 @@ router.push({
     <Text style={styles.posterIcon}>🗓️</Text>
     <View>
       <Text style={styles.posterTitle}>Weekly Plan</Text>
-      <Text style={styles.posterPrice}>₹{product.weeklyPrice} -/-</Text>
+     <Text style={styles.posterPrice}>₹{product.weeklyPrice[selectedQuantityIndex]} -/-</Text>
     </View>
   </LinearGradient>
 
@@ -753,6 +791,36 @@ saveAddressButton: {
 saveAddressButtonText: {
   color: '#fff',
   fontSize: 16,
+  fontWeight: '700',
+},
+quantitySelectContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  marginBottom: 20,
+},
+
+quantityOption: {
+  borderWidth: 1,
+  borderColor: '#0b380e',
+  borderRadius: 10,
+  paddingVertical: 8,
+  paddingHorizontal: 14,
+  margin: 5,
+  backgroundColor: '#fff',
+},
+
+quantityOptionSelected: {
+  backgroundColor: '#0b380e',
+},
+
+quantityOptionText: {
+  color: '#0b380e',
+  fontSize: 15,
+  fontWeight: '500',
+},
+
+quantityOptionTextSelected: {
+  color: '#fff',
   fontWeight: '700',
 },
 

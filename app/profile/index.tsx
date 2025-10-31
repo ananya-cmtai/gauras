@@ -69,71 +69,44 @@ export default function ProfileScreen() {
     address: '',
     referCode: '',
   });
-  useEffect(()=>{
-      const fetchProfile = async () => {
-      // setLoading(true);
-      try {
-       const name = await AsyncStorage.getItem('currentUserName');
-      const email = await AsyncStorage.getItem('currentUserEmail');
-      const phone = await AsyncStorage.getItem('currentUserPhone');
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      // Get token
+      const token = await AsyncStorage.getItem('userToken');
 
-      setProfile({
-        name: name || '',
-        email: email || '',
-        phone: phone || '',
-        address: '',
-        referCode:''
-    
-      });
-  } catch (error) {
-        // console.error('Failed to fetch profile:', error);
-        Alert.alert('Error', 'Could not load profile');
-      }
-    };
-
-    fetchProfile();
- 
-
-  },[]);
-    useEffect(() => {
-    const fetchProfile = async () => {
-      // setLoading(true);
-      try {
-        const token = await AsyncStorage.getItem('userToken');
-        if (!token) return;
-
-        const res = await axios.get(`https://gauras-backened.vercel.app/api/users/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      // Fetch from backend if token exists
+      if (token) {
+        const res = await axios.get('https://gauras-backened.vercel.app/api/users/profile', {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const user = res.data.user;
-        if(user.name){
-    await AsyncStorage.setItem('currentUserName',user.name);
-        }
-  if(user.email){
-     await AsyncStorage.setItem('currentUserEmail',user.email);
-  }
-    if(user.phone){
-     await AsyncStorage.setItem('currentUserPhone',user.phone);
-    }
+        await AsyncStorage.setItem('currentUserName', user.name || '');
+        await AsyncStorage.setItem('currentUserEmail', user.email || '');
+        await AsyncStorage.setItem('currentUserPhone', user.phone || '');
 
         setProfile({
           name: user.name || '',
           email: user.email || '',
           phone: user.phone || '',
           address: user.address || '',
-          referCode :user.referCode
+          referCode: user.referCode || '',
         });
-      } catch (error) {
-        // console.error('Failed to fetch profile:', error);
-        Alert.alert('Error', 'Could not load profile');
+      } else {
+        // fallback: load from AsyncStorage
+        const name = await AsyncStorage.getItem('currentUserName');
+        const email = await AsyncStorage.getItem('currentUserEmail');
+        const phone = await AsyncStorage.getItem('currentUserPhone');
+        setProfile({ name: name || '', email: email || '', phone: phone || '', address: '', referCode: '' });
       }
-    };
+    } catch (error) {
+      Alert.alert('Error', 'Could not load profile');
+    }
+  };
 
-    fetchProfile();
-  }, []);
+  fetchProfile();
+}, []);
 
   return (
     <SafeAreaView style={styles.container}>
