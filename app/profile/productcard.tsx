@@ -1,238 +1,259 @@
-// components/ProductCard.tsx
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart, removeFromCart, updateCartItem } from '../../redux/cartSlice';
 import { addToFavourites, removeFromFavourites } from '../../redux/favouriteSlice';
 import { RootState } from '../../redux/store';
 
+const { width } = Dimensions.get('window');
+
 interface Props {
   item: any;
   isTablet: boolean;
-}
-  interface CartItem {
-  productId: string;
-  name: string;
-  imageUrl: string;
-  quantity: string;          // or number depending on your app
-  quantityPackets: number;
-  price: number;
 }
 
 const ProductCard: React.FC<Props> = ({ item, isTablet }) => {
   const dispatch = useDispatch();
   const router = useRouter();
+
   const cartItem = useSelector((state: RootState) =>
     state.cart.items.find((p) => p.productId === item._id)
   );
-const [selectedQuantity, setSelectedQuantity] = useState<string>(
+
+  const [selectedQuantity, setSelectedQuantity] = useState<string>(
     Array.isArray(item.quantity) ? item.quantity[0] : item.quantity
   );
 
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+
   const favourites = useSelector((state: RootState) => state.favourites.items);
   const cartItemsAll = useSelector((state: RootState) => state.cart.items);
-useEffect(() => {
-  const saveFavouriteToBackend = async () => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) return;
 
-      await axios.post(
-        'https://gauras-backened.vercel.app/api/favourite/save',
-        { items: favourites },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    } catch (err) {
-      console.error('Favourite sync error:', err);
-    }
-  };
+  // ✅ Convert single image to array for consistency
+  const imageArray = Array.isArray(item.imageUrl)
+    ? item.imageUrl
+    : [item.imageUrl || 'https://static.toiimg.com/photo/113458714.cms'];
 
-  
+  useEffect(() => {
+    const saveFavouriteToBackend = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token) return;
+
+        await axios.post(
+          'https://gauras-backened.vercel.app/api/favourite/save',
+          { items: favourites },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error('Favourite sync error:', err);
+      }
+    };
     saveFavouriteToBackend();
-  
-}, [favourites]);
-useEffect(() => {
-  const saveCartToBackend = async () => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) return;
+  }, [favourites]);
 
-      await axios.post(
-        'https://gauras-backened.vercel.app/api/cart/save',
-        { items: cartItemsAll },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    } catch (err) {
-      console.error('Cart sync error:', err);
-    }
-  };
+  useEffect(() => {
+    const saveCartToBackend = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token) return;
 
- 
+        await axios.post(
+          'https://gauras-backened.vercel.app/api/cart/save',
+          { items: cartItemsAll },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error('Cart sync error:', err);
+      }
+    };
     saveCartToBackend();
-  
-}, [cartItemsAll]);
+  }, [cartItemsAll]);
+
   const isInFavourites = useSelector((state: RootState) =>
-    state.favourites.items.some(fav => fav.productId === item._id)
+    state.favourites.items.some((fav) => fav.productId === item._id)
   );
-const getSelectedPrice = () => {
-  if (Array.isArray(item.quantity) && Array.isArray(item.price)) {
-    const index = item.quantity.indexOf(selectedQuantity);
-    return item.price[index] ?? item.price[0];
-  }
-  return Array.isArray(item.price) ? item.price[0] : item.price;
-};
+
+  const getSelectedPrice = () => {
+    if (Array.isArray(item.quantity) && Array.isArray(item.price)) {
+      const index = item.quantity.indexOf(selectedQuantity);
+      return item.price[index] ?? item.price[0];
+    }
+    return Array.isArray(item.price) ? item.price[0] : item.price;
+  };
 
   const toggleFavourites = () => {
     if (isInFavourites) {
       dispatch(removeFromFavourites(item._id));
     } else {
-      dispatch(addToFavourites({
-        productId: item._id,
-        name: item.name,
-        imageUrl: item.imageUrl,
-     
-        quantity:item.quantity,
-        price:item.price,
-      }));
+      dispatch(
+        addToFavourites({
+          productId: item._id,
+          name: item.name,
+          imageUrl: imageArray[0], // ✅ Only first image stored
+          quantity: item.quantity,
+          price: item.price,
+        })
+      );
     }
   };
 
   const handleAddToCart = () => {
-    dispatch(addToCart({
-      productId: item._id,
-      name: item.name,
-      imageUrl: item.imageUrl,
-   
-      quantity: selectedQuantity,  // e.g. "500g"
-      quantityPackets: 1,
-      price: getSelectedPrice(),
-    }));
+    dispatch(
+      addToCart({
+        productId: item._id,
+        name: item.name,
+        imageUrl: imageArray[0], // ✅ Only first image stored
+        quantity: selectedQuantity,
+        quantityPackets: 1,
+        price: getSelectedPrice(),
+      })
+    );
   };
 
   const handleIncrement = () => {
     if (cartItem) {
-    dispatch(updateCartItem({
-  productId: cartItem.productId,
-  quantity: cartItem.quantity, // ✅ Add this
-  quantityPackets: cartItem.quantityPackets + 1,
-}));
-
+      dispatch(
+        updateCartItem({
+          productId: cartItem.productId,
+          quantity: cartItem.quantity,
+          quantityPackets: cartItem.quantityPackets + 1,
+        })
+      );
     }
   };
+
   const handleSelectQuantity = (q: string) => {
     setSelectedQuantity(q);
   };
 
   const handleSubscribe = () => {
-  // Convert description array to a JSON string
-  const descriptionString = JSON.stringify(item.description);
+    router.push({
+      pathname: '/subscriptionpage',
+      params: {
+        productId: item._id,
+        name: item.name,
+        price: JSON.stringify(item.price),
+        description: JSON.stringify(item.description),
+        imageUrl: JSON.stringify(imageArray), // ✅ send all images
+        quantity: JSON.stringify(item.quantity),
+        dailyPrice: JSON.stringify(item.dailyPrice),
+        weeklyPrice: JSON.stringify(item.weeklyPrice),
+        alternatePrice: JSON.stringify(item.alternatePrice),
+      },
+    });
+  };
 
- router.push({
-  pathname: '/subscriptionpage',
-  params: {
-    productId: item._id,
-    name: item.name,
-    price: JSON.stringify(item.price),          // 👈 convert to string
-    description: JSON.stringify(item.description),
-    imageUrl: item.imageUrl,
-    quantity: JSON.stringify(item.quantity),    // 👈 convert to string
-    dailyPrice: JSON.stringify(item.dailyPrice), // 👈 convert to string
-    weeklyPrice: JSON.stringify(item.weeklyPrice), // 👈 convert to string
-    alternatePrice: JSON.stringify(item.alternatePrice) // 👈 convert to string
-  },
-});
-
-
-  // Optionally show an alert on subscription
-  // Alert.alert('Subscribed!', 'You have successfully subscribed.');
-};
-
-
- 
   const handleDecrement = () => {
     if (cartItem) {
       const newPackets = cartItem.quantityPackets - 1;
       if (newPackets <= 0) {
         dispatch(removeFromCart(cartItem.productId));
       } else {
-       dispatch(updateCartItem({
-  productId: cartItem.productId,
-  quantity: cartItem.quantity, // ✅ Add this
-  quantityPackets: newPackets,
-}));
-
+        dispatch(
+          updateCartItem({
+            productId: cartItem.productId,
+            quantity: cartItem.quantity,
+            quantityPackets: newPackets,
+          })
+        );
       }
     }
   };
 
+  // ✅ Carousel index update
+  const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) setCarouselIndex(viewableItems[0].index);
+  }).current;
+
   return (
     <View style={[styles.productCard, isTablet && styles.productCardTablet]}>
-      
-      {/* Heart icon in top-right corner */}
       <TouchableOpacity style={styles.wishlistIcon} onPress={toggleFavourites}>
-        <Ionicons 
-          name={isInFavourites ? "heart" : "heart-outline"} 
-          size={24} 
-          color={isInFavourites ? "red" : "#666"} 
+        <Ionicons
+          name={isInFavourites ? 'heart' : 'heart-outline'}
+          size={24}
+          color={isInFavourites ? 'red' : '#666'}
         />
       </TouchableOpacity>
 
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl  || 'https://static.toiimg.com/photo/113458714.cms' }} style={styles.productImage} />
-      ) : (
-        <View style={[styles.productImage, styles.imagePlaceholder]}>
-          <Text>No Image</Text>
-        </View>
-      )}
+      {/* ✅ Product Image Carousel */}
+      <View style={styles.carouselContainer}>
+        <FlatList
+          ref={flatListRef}
+          data={imageArray}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(_: string, idx: number) => idx.toString()}
+
+
+          renderItem={({ item: img }) => (
+            <Image source={{ uri: img }} style={styles.productImage} />
+          )}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+        />
+   {imageArray.length > 1 && (
+  <View style={styles.dotsContainer}>
+    {imageArray.map((_: string, i: number) => (
+      <View
+        key={i}
+        style={[styles.dot, i === carouselIndex && styles.activeDot]}
+      />
+    ))}
+  </View>
+)}
+
+      </View>
+
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name || 'Unnamed Product'}</Text>
-       <Text style={styles.productPrice}>₹{getSelectedPrice()}</Text>
+        <Text style={styles.productPrice}>₹{getSelectedPrice()}</Text>
 
-    {Array.isArray(item.quantity) ? (
-  <View style={styles.quantityContainer}>
-    {item.quantity.map((q: string, index: number) => {
-      // Agar product cart me hai aur ye quantity cart me selected quantity se match nahi karti, disable karo
-      const isDisabled = cartItem && cartItem.quantity !== q;
-      const isSelected = selectedQuantity === q;
-
-      return (
-        <TouchableOpacity
-          key={index}
-          style={[
-            styles.quantityOption,
-            isSelected && styles.quantityOptionSelected,
-            isDisabled && { opacity: 0.5 } // Disable look
-          ]}
-          onPress={() => !isDisabled && handleSelectQuantity(q)}
-          disabled={isDisabled} // Disable click
-        >
-          <Text
-            style={[
-              styles.quantityText,
-              isSelected && styles.quantityTextSelected,
-            ]}
-          >
-            {q}
-          </Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-) : (
-  <Text style={styles.productQuantity}>{item.quantity}</Text>
-)}
+        {Array.isArray(item.quantity) ? (
+          <View style={styles.quantityContainer}>
+            {item.quantity.map((q: string, index: number) => {
+              const isDisabled = cartItem && cartItem.quantity !== q;
+              const isSelected = selectedQuantity === q;
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.quantityOption,
+                    isSelected && styles.quantityOptionSelected,
+                    isDisabled && { opacity: 0.5 },
+                  ]}
+                  onPress={() => !isDisabled && handleSelectQuantity(q)}
+                  disabled={isDisabled}
+                >
+                  <Text
+                    style={[
+                      styles.quantityText,
+                      isSelected && styles.quantityTextSelected,
+                    ]}
+                  >
+                    {q}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={styles.productQuantity}>{item.quantity}</Text>
+        )}
 
         <View style={styles.productActions}>
           {cartItem ? (
@@ -254,7 +275,10 @@ const getSelectedPrice = () => {
               <TouchableOpacity style={styles.addButton} onPress={handleAddToCart}>
                 <Text style={styles.addButtonText}>Add</Text>
               </TouchableOpacity>
-            <TouchableOpacity style={styles.subscribeButton} onPress={handleSubscribe}>
+              <TouchableOpacity
+                style={styles.subscribeButton}
+                onPress={handleSubscribe}
+              >
                 <Text style={styles.subscribeButtonText}>Subscribe</Text>
               </TouchableOpacity>
             </>
@@ -271,13 +295,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: 150,
     margin: 8,
-    flex: 1,
-    overflow: 'hidden',
+    flexGrow: 1,
+    paddingBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 5,
+  },
+  carouselContainer: {
+    position: 'relative',
+  },
+  productImage: {
+    width: 150,
+    height: 140,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    resizeMode: 'cover',
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ccc',
+    marginHorizontal: 3,
+  },
+  activeDot: {
+    backgroundColor: '#0b380e',
   },
   productCardTablet: {
     maxWidth: (800 - 200 - 40) / 3 - 16,
@@ -290,16 +339,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.8)',
     borderRadius: 20,
     padding: 4,
-  },
-  productImage: {
-    width: '100%',
-    height: 140,
-    resizeMode: 'cover',
-  },
-  imagePlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E5E7EB',
   },
   productInfo: {
     padding: 12,
@@ -349,7 +388,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#FFFFFF',
-  }, quantityContainer: {
+  },
+  quantityContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 8,

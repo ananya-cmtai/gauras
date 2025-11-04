@@ -142,16 +142,26 @@ useEffect(() => {
     if (carouselTimer.current) clearInterval(carouselTimer.current);
   };
 }, [isInputFocused, carouselImages]);
+const handleOTPChange = (index: number, value: string) => {
+  // Only allow single-digit input
+  if (value.length > 1) return;
 
-  const handleOTPChange = (index: number, value: string) => {
-    if (value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    if (value && index < inputRefs.current.length - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
+  const newOtp = [...otp];
+  newOtp[index] = value;
+  setOtp(newOtp);
+
+  // Move to next box automatically if user types a digit
+  if (value && index < inputRefs.current.length - 1) {
+    inputRefs.current[index + 1]?.focus();
+  }
+};
+
+// Handle backspace to move focus back
+const handleKeyPress = (e: any, index: number) => {
+  if (e.nativeEvent.key === 'Backspace' && otp[index] === '' && index > 0) {
+    inputRefs.current[index - 1]?.focus();
+  }
+};
 
   const handleSendOTP = async () => {
     if (!emailOrPhone.trim()) { alert('Please enter email or phone'); return; }
@@ -168,6 +178,11 @@ useEffect(() => {
     } catch (error) { alert('Error sending OTP'); }
     setIsSendingOtp(false);
   };
+useEffect(() => {
+  if (otp.join('').length === 6) {
+    handleVerifyOTP();
+  }
+}, [otp]);
 
   const handleVerifyOTP = async () => {
     const code = otp.join('');
@@ -268,22 +283,24 @@ useEffect(() => {
             ) : (
               <>
                 <Text style={styles.title}>Enter OTP</Text>
-                <View style={styles.otpContainer}>
-                  {otp.map((digit, idx) => (
-                    <TextInput
-                      key={idx}
-                      ref={(ref) => { inputRefs.current[idx] = ref; }}
-                      style={styles.otpBox}
-                      keyboardType="number-pad"
-                      maxLength={1}
-                      value={digit}
-                      onChangeText={(val) => handleOTPChange(idx, val)}
-                      returnKeyType={idx === 5 ? 'done' : 'next'}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={() => setIsInputFocused(false)}
-                    />
-                  ))}
-                </View>
+            <View style={styles.otpContainer}>
+  {otp.map((digit, idx) => (
+    <TextInput
+      key={idx}
+      ref={(ref) => { inputRefs.current[idx] = ref; }}
+      style={styles.otpBox}
+      keyboardType="number-pad"
+      maxLength={1}
+      value={digit}
+      onChangeText={(val) => handleOTPChange(idx, val)}
+      onKeyPress={(e) => handleKeyPress(e, idx)} // 👈 handles backspace
+      returnKeyType={idx === 5 ? 'done' : 'next'}
+      onFocus={() => setIsInputFocused(true)}
+      onBlur={() => setIsInputFocused(false)}
+    />
+  ))}
+</View>
+
 
                 <TouchableOpacity style={styles.button} onPress={handleVerifyOTP} disabled={isVerifyingOtp}>
                   {isVerifyingOtp ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Verify OTP</Text>}

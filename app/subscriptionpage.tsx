@@ -4,10 +4,10 @@ import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
+const screenWidth = Dimensions.get('window').width;
 const SubscriptionPage: React.FC = () => {
   const [packetCount, setPacketCount] = useState(1);
   const [subscriptionType, setSubscriptionType] = useState<'daily' | 'alternate' | 'weekly'>('daily');
@@ -48,23 +48,34 @@ const [selectedQuantityIndex, setSelectedQuantityIndex] = useState(0);
     fetchProfile();
   }, []);
  const router=useRouter();
-  const { name, price, description, imageUrl, quantity, dailyPrice, alternatePrice, weeklyPrice, productId } = useLocalSearchParams<{
-    name?: string;
-    price?: string;
-    description?: string;
-    imageUrl?: string;
-    quantity?: string;
-    dailyPrice?: string;
-    alternatePrice?: string;
-    weeklyPrice?: string;
-    productId?: string;
-  }>();
+const { 
+  name, 
+  price, 
+  description, 
+  imageUrl, 
+  quantity, 
+  dailyPrice, 
+  alternatePrice, 
+  weeklyPrice, 
+  productId 
+} = useLocalSearchParams<{
+  name?: string;
+  price?: string;
+  description?: string;
+  imageUrl?: string | string[]; // ✅ fixed
+  quantity?: string;
+  dailyPrice?: string;
+  alternatePrice?: string;
+  weeklyPrice?: string;
+  productId?: string;
+}>();
+
 
 const [product, setProduct] = useState<null | {
   name: string;
   pricePerLitre: number[];       // 👈 now an array
   descriptionPoints: string[];
-  image: string;
+  image: string[];
   packetSize: string[];
   dailyPrice: number[];
   alternatePrice: number[];
@@ -82,13 +93,13 @@ const parsedDailyPrice = JSON.parse(dailyPrice); // array of daily prices
 const parsedAlternatePrice = JSON.parse(alternatePrice); // array of alternate prices
 const parsedWeeklyPrice = JSON.parse(weeklyPrice); // array of weekly prices
 const parsedPrice = JSON.parse(price); // 👈 add this
-
+const parsedImages = imageUrl ? JSON.parse(imageUrl as string) : [];
 setProduct({
   name: String(name),
   pricePerLitre:parsedPrice,
   descriptionPoints: parsedDescription,
   packetSize: parsedQuantities,
-  image: imageUrl,
+  image: parsedImages.length > 0 ? parsedImages : ['https://static.toiimg.com/photo/113458714.cms'],
   dailyPrice: parsedDailyPrice,
   alternatePrice: parsedAlternatePrice,
   weeklyPrice: parsedWeeklyPrice,
@@ -209,8 +220,26 @@ router.push({
         <Text style={styles.headerText}>New Subscription</Text>
 
         <View style={styles.productCard}>
-          <Image source={{ uri: product.image  || 'https://static.toiimg.com/photo/113458714.cms' }} style={styles.productImage} />
-          <Text style={styles.productName}>{product.name}</Text>
+           <FlatList
+    data={Array.isArray(product.image) ? product.image : [product.image]}
+    horizontal
+    pagingEnabled
+    showsHorizontalScrollIndicator={false}
+    keyExtractor={(item, index) => index.toString()}
+    style={{ marginBottom: 10 }} // thoda space for text
+    renderItem={({ item }) => (
+      <Image
+        source={{ uri: item || 'https://static.toiimg.com/photo/113458714.cms' }}
+        style={{
+          width: screenWidth - 40, // container padding ke hisaab se
+          height: 200,
+          borderRadius: 12,
+          resizeMode: 'contain',
+          marginRight: 10,
+        }}
+      />
+    )}
+  /><Text style={styles.productName}>{product.name}</Text>
           {/* <Text style={styles.productPrice}>₹{product.pricePerLitre} / Litre</Text>
           <Text style={styles.packetSize}>{product.packetSize}</Text> */}
         </View>
@@ -393,47 +422,60 @@ router.push({
         )}
 
       </ScrollView>
-      <Modal
+<Modal
   visible={showAddressModal}
   animationType="slide"
   transparent
   onRequestClose={() => setShowAddressModal(false)}
 >
-  <Pressable style={styles.modalOverlay} onPress={() => setShowAddressModal(false)}>
+  <KeyboardAvoidingView
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    style={{ flex: 1 }}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // adjust if needed
+  >
+    <Pressable 
+      style={styles.modalOverlay} 
+      onPress={() => setShowAddressModal(false)}
+    >
+      {/* Empty Pressable to detect outside press */}
+    </Pressable>
+
     <View style={styles.addressModalContent}>
       <Text style={styles.modalTitle}>Add Delivery Address</Text>
 
-      <TextInput
-        style={styles.addressInput}
-        placeholder="Enter your address"
-        placeholderTextColor="#999"
-        multiline
-        value={addressInput}
-        onChangeText={setAddressInput}
-      />
-{ addressInput.length ==0 ?
-      <TouchableOpacity
-        style={styles.saveAddressButton}
-       
+      <ScrollView 
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 20 }}
       >
-        <Text style={styles.saveAddressButtonText}>Fill Address Firstly...</Text>
-      </TouchableOpacity>
-      :
-      <TouchableOpacity
-        style={styles.saveAddressButton}
-        onPress={() => {
-          setShowAddressModal(false);
-       setShowPaymentModal(true)
-          // Alert.alert("Address Saved", addressInput); // replace with logic
-          // optionally: setUserAddress(addressInput);
-        }}
-      >
-        <Text style={styles.saveAddressButtonText}>Subscribe Now</Text>
-      </TouchableOpacity>
-      }
+        <TextInput
+          style={styles.addressInput}
+          placeholder="Enter your address"
+          placeholderTextColor="#999"
+          multiline
+          value={addressInput}
+          onChangeText={setAddressInput}
+        />
+
+        {addressInput.length === 0 ? (
+          <TouchableOpacity style={styles.saveAddressButton}>
+            <Text style={styles.saveAddressButtonText}>Fill Address Firstly...</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.saveAddressButton}
+            onPress={() => {
+              setShowAddressModal(false);
+              setShowPaymentModal(true);
+            }}
+          >
+            <Text style={styles.saveAddressButtonText}>Subscribe Now</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
     </View>
-  </Pressable>
+  </KeyboardAvoidingView>
 </Modal>
+
 
       <Modal
   visible={showPaymentModal}

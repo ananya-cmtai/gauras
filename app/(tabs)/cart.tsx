@@ -3,7 +3,9 @@ import {
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -331,39 +333,48 @@ const total = cartItems.reduce(
   transparent
   onRequestClose={() => setShowAddressModal(false)}
 >
-  <Pressable style={styles.modalOverlay} onPress={() => setShowAddressModal(false)}>
-    <View style={styles.addressModalContent}>
-      <Text style={styles.modalTitle}>Add Delivery Address</Text>
+  <KeyboardAvoidingView
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    style={{ flex: 1 }}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // adjust if needed
+  >
+    <Pressable 
+      style={styles.modalOverlay} 
+      onPress={() => setShowAddressModal(false)}
+    >
+      <Pressable style={styles.addressModalContent}>
+        <Text style={styles.modalTitle}>Add Delivery Address</Text>
 
-      <TextInput
-        style={styles.addressInput}
-        placeholder={"Enter your address"}
-        placeholderTextColor="#999"
-        multiline
-        value={addressInput}
-        onChangeText={setAddressInput}
-      />
-      { addressInput.length ==0?
-<TouchableOpacity
-        style={styles.saveAddressButton}
-       
-      >
-        <Text style={styles.saveAddressButtonText}>Fill Address Firstly...</Text>
-      </TouchableOpacity>:
-      <TouchableOpacity
-        style={styles.saveAddressButton}
-        onPress={() => {
-          setShowAddressModal(false);
-          setShowPaymentModal(true);
-          // Alert.alert("Address Saved", addressInput); // replace with logic
-          // optionally: setUserAddress(addressInput);
-        }}
-      >
-        <Text style={styles.saveAddressButtonText}>Proceed to Checkout</Text>
-      </TouchableOpacity>}
-    </View>
-  </Pressable>
+        <TextInput
+          style={styles.addressInput}
+          placeholder="Enter your address"
+          placeholderTextColor="#999"
+          multiline
+          value={addressInput}
+          onChangeText={setAddressInput}
+        />
+
+        {addressInput.length === 0 ? (
+          <TouchableOpacity style={styles.saveAddressButton}>
+            <Text style={styles.saveAddressButtonText}>Fill Address Firstly...</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.saveAddressButton}
+            onPress={() => {
+              setShowAddressModal(false);
+              setShowPaymentModal(true);
+            }}
+          >
+            <Text style={styles.saveAddressButtonText}>Proceed to Checkout</Text>
+          </TouchableOpacity>
+        )}
+      </Pressable>
+    </Pressable>
+  </KeyboardAvoidingView>
 </Modal>
+
+
 <Modal
   visible={couponModalVisible}
   animationType="slide"

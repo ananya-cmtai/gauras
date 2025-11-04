@@ -2,15 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert, Image,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -226,7 +227,7 @@ const computeDeliveryDatesBetween = (subscription: any): string[] => {
 <View style={styles.productInfoRow}>
   {subscription.productId?.imageUrl && (
     <Image
-      source={{ uri: subscription.productId.imageUrl  || 'https://static.toiimg.com/photo/113458714.cms' }}
+      source={{ uri: subscription.productId.imageUrl[0]  || 'https://static.toiimg.com/photo/113458714.cms' }}
       style={styles.productImage}
       resizeMode="cover"
     />
