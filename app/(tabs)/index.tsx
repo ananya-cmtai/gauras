@@ -217,14 +217,24 @@ const renderProduct = ({ item }: { item: Product }) => (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{section.title}</Text>
     </View>
-    <FlatList
-      data={section.products}
-      renderItem={renderProduct}
-      keyExtractor={(item) => item._id}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.productList}
-    />
+<FlatList
+  data={section.products}
+  renderItem={({ item }) => (
+    <View style={{ alignSelf: 'flex-start' }}>
+      {renderProduct({ item })}
+    </View>
+  )}
+  keyExtractor={(item) => item._id}
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  contentContainerStyle={{ paddingHorizontal: 20 }}
+  ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+  nestedScrollEnabled
+/>
+
+
+
+
   </View>
 ))}
 
@@ -237,7 +247,7 @@ const renderProduct = ({ item }: { item: Product }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    height:"100%",
+    // height:"100%",
     // backgroundColor: '#0b380e',
   },
 
@@ -288,6 +298,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 32,
+    // backgroundColor:"yellow",
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -306,78 +317,7 @@ const styles = StyleSheet.create({
     color: '#0b380e',
     fontWeight: '500',
   },
-  productList: {
-    paddingLeft: 20,
-  },
-  productCard: {
-    width: 160,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  productImage: {
-    width: '100%',
-    height: 120,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    resizeMode: 'cover',
-  },
-  productInfo: {
-    padding: 12,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  productPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0b380e',
-    marginBottom: 2,
-  },
-  productQuantity: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  productActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  addButton: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  subscribeButton: {
-    flex: 1,
-    backgroundColor: '#0b380e',
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  subscribeButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+ 
     header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

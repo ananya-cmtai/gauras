@@ -190,18 +190,23 @@ const renderProduct = ({ item }: { item: Product }) => (
           contentContainerStyle={styles.categoriesList}
         />
       </View>
-      <FlatList
-        data={filteredProducts}
-        renderItem={renderProduct}
-        keyExtractor={(item, index) =>
-          item.id ? item.id.toString() : index.toString()
-        }
-        numColumns={2}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.productsList}
-         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0b380e']} />
-        }/>
+ <FlatList
+  data={filteredProducts}
+  renderItem={renderProduct}
+  keyExtractor={(item, index) => (item.id ? item.id.toString() : index.toString())}
+  numColumns={2} 
+  columnWrapperStyle={{ alignItems: 'flex-start' }} // important!
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={styles.productsList}
+  refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      colors={['#0b380e']}
+    />
+  }
+/>
+
       
     </SafeAreaView>
   );
@@ -274,8 +279,9 @@ const styles = StyleSheet.create({
     color: '#fecd54',
   },
   productsList: {
-    paddingHorizontal: 20,
+    // paddingHorizontal: 20,
     paddingBottom: 20,
+
   },
   productCard: {
     backgroundColor: '#FFFFFF',
