@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -19,9 +19,9 @@ const isTablet = width > 768;
 interface Product {
   id: string;
   name: string;
-  imageUrl: string;
+  imageUrl: [string];
   price: number;
-  quantity: string;
+  quantity: [string];
   category?: string;
   description?: [string] ;
 }

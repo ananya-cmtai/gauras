@@ -63,7 +63,7 @@ const {
   price?: string;
   description?: string;
   imageUrl?: string | string[]; // ✅ fixed
-  quantity?: string;
+  quantity?: string | string[];
   dailyPrice?: string;
   alternatePrice?: string;
   weeklyPrice?: string;
@@ -159,7 +159,7 @@ const getPriceByType = () => {
   total,
   ...(subscriptionType === 'weekly' && { deliveryDays: selectedDay })
 };
-
+console.log(payload)
 router.push({
   pathname: '/razorpaywebviewsubscribe',
   params: {
