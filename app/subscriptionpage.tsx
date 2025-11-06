@@ -63,7 +63,7 @@ const {
   price?: string;
   description?: string;
   imageUrl?: string | string[]; // ✅ fixed
-  quantity?: string | string[];
+  quantity?:  string[];
   dailyPrice?: string;
   alternatePrice?: string;
   weeklyPrice?: string;
@@ -88,12 +88,19 @@ const [product, setProduct] = useState<null | {
     if (name && price && description && imageUrl && quantity && dailyPrice && alternatePrice && weeklyPrice && productId) {
       try {
         const parsedDescription = JSON.parse(description);
-const parsedQuantities = JSON.parse(quantity); // array of quantities
+const parsedQuantities =
+  typeof quantity === 'string'
+    ? JSON.parse(quantity)
+    : Array.isArray(quantity)
+    ? quantity
+    : [];
+ // array of quantities
 const parsedDailyPrice = JSON.parse(dailyPrice); // array of daily prices
 const parsedAlternatePrice = JSON.parse(alternatePrice); // array of alternate prices
 const parsedWeeklyPrice = JSON.parse(weeklyPrice); // array of weekly prices
 const parsedPrice = JSON.parse(price); // 👈 add this
 const parsedImages = imageUrl ? JSON.parse(imageUrl as string) : [];
+console.log(parsedQuantities);
 setProduct({
   name: String(name),
   pricePerLitre:parsedPrice,
