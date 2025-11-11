@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -106,20 +106,26 @@ export default function TransactionsScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={transactions}
-        renderItem={renderTransaction}
-        keyExtractor={(item, index) => index.toString()}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.transactionsList}
-          refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0b380e']} />
-        }
-      />
-    </SafeAreaView>
-  );
+ return (
+  <SafeAreaView style={styles.container}>
+    <FlatList
+      data={transactions}
+      renderItem={renderTransaction}
+      keyExtractor={(item, index) => index.toString()}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.transactionsList}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0b380e']} />
+      }
+      ListEmptyComponent={() => (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ fontSize: 16, color: '#555' }}>No transactions available</Text>
+        </View>
+      )}
+    />
+  </SafeAreaView>
+);
+
 }
 
 

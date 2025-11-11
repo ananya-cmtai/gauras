@@ -7,6 +7,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -37,6 +38,7 @@ const ProductCard: React.FC<Props> = ({ item, isTablet }) => {
   const dispatch = useDispatch();
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
+const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const cartItem = useSelector((state: RootState) =>
     state.cart.items.find((p) => p.productId === item._id)
@@ -47,7 +49,7 @@ const ProductCard: React.FC<Props> = ({ item, isTablet }) => {
   const [selectedQuantity, setSelectedQuantity] = useState<string>(
     Array.isArray(item.quantity) ? item.quantity[0] : item.quantity
   );
-  const [carouselIndex, setCarouselIndex] = useState(0);
+
 
   const imageArray = Array.isArray(item.imageUrl)
     ? item.imageUrl
@@ -68,6 +70,25 @@ const ProductCard: React.FC<Props> = ({ item, isTablet }) => {
     };
     syncData('https://gauras-backened.vercel.app/api/favourite/save', favourites);
   }, [favourites]);
+// 🖼️ Auto-move modal carousel
+// State
+const [carouselIndex, setCarouselIndex] = useState<number>(0);
+const modalFlatListRef = useRef<FlatList>(null);
+
+// Auto-scroll modal carousel
+useEffect(() => {
+  if (!showDetailsModal || imageArray.length <= 1) return;
+
+  const interval = setInterval(() => {
+    setCarouselIndex(prev => {
+      const nextIndex = (prev + 1) % imageArray.length;
+      modalFlatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      return nextIndex;
+    });
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, [showDetailsModal, imageArray.length]);
 
   useEffect(() => {
     const syncData = async (url: string, data: any) => {
@@ -189,6 +210,7 @@ useEffect(() => {
   }).current;
 
   return (
+    <>
     <View style={[styles.card, { width: cardWidth }]}>
       {/* ❤️ Favourite Icon */}
       <TouchableOpacity style={styles.wishlistIcon} onPress={toggleFavourites}>
@@ -200,22 +222,24 @@ useEffect(() => {
       </TouchableOpacity>
 
       {/* 🖼️ Product Image Carousel */}
-      <View style={styles.carouselWrapper}>
-        <FlatList
-          ref={flatListRef}
-          data={imageArray}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(_, idx) => idx.toString()}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-          renderItem={({ item: img }) => (
-            <Image source={{ uri: img }} style={[styles.productImage, { width: cardWidth }]} />
-          )}
-        />
-      
-      </View>
+  <TouchableOpacity onPress={() => setShowDetailsModal(true)} activeOpacity={0.9}>
+  <View style={styles.carouselWrapper}>
+    <FlatList
+      ref={flatListRef}
+      data={imageArray}
+      horizontal
+      pagingEnabled
+      showsHorizontalScrollIndicator={false}
+      keyExtractor={(_, idx) => idx.toString()}
+      onViewableItemsChanged={onViewableItemsChanged}
+      viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+      renderItem={({ item: img }) => (
+        <Image source={{ uri: img }} style={[styles.productImage, { width: cardWidth }]} />
+      )}
+    />
+  </View>
+</TouchableOpacity>
+
   {imageArray.length > 1 && (
           <View style={styles.dotsContainer}>
             {imageArray.map((_: string, i: number) => (
@@ -284,6 +308,118 @@ useEffect(() => {
         </View>
       </View>
     </View>
+    <Modal
+  visible={showDetailsModal}
+  animationType="slide"
+  transparent
+  onRequestClose={() => setShowDetailsModal(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <TouchableOpacity
+        style={styles.modalCloseButton}
+        onPress={() => setShowDetailsModal(false)}
+      >
+        <Ionicons name="close" size={24} color="#333" />
+      </TouchableOpacity>
+
+  <View style={{ height: 250, marginBottom: 10 }}>
+<FlatList
+  ref={modalFlatListRef}
+  data={imageArray}
+  horizontal
+  pagingEnabled
+  showsHorizontalScrollIndicator={false}
+  keyExtractor={(_, i) => i.toString()}
+  renderItem={({ item: img }) => (
+    <Image
+      source={{ uri: img }}
+      style={{
+        width: Dimensions.get('window').width - 64,
+        height: 250,
+        borderRadius: 10,
+        resizeMode: 'cover',
+      }}
+    />
+  )}
+  onViewableItemsChanged={({ viewableItems }) => {
+    if (viewableItems.length > 0 && typeof viewableItems[0].index === 'number') {
+      setCarouselIndex(viewableItems[0].index);
+    }
+  }}
+  viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+/>
+
+  {/* Carousel dots */}
+  <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 6 }}>
+    {imageArray.map((_: string, i: number) => (
+  <View
+    key={i}
+    style={{
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: i === carouselIndex ? COLORS.primary : '#ccc',
+      marginHorizontal: 3,
+    }}
+  />
+))}
+
+  </View>
+</View>
+
+
+
+      <Text style={styles.modalProductName}>{item.name}</Text>
+      <Text style={styles.modalPrice}>₹{getSelectedPrice()}</Text>
+
+      {item.description && (
+        <View style={styles.modalDescriptionBox}>
+          {Array.isArray(item.description)
+            ? item.description.map((d: string, i: number) => (
+                <Text key={i} style={styles.modalDescriptionText}>
+                  • {d}
+                </Text>
+              ))
+            : <Text style={styles.modalDescriptionText}>{item.description}</Text>}
+        </View>
+      )}
+
+      {Array.isArray(item.quantity) && (
+        <View style={styles.modalQuantityContainer}>
+          {item.quantity.map((q: string, index: number) => {
+            const isDisabled = cartItem && cartItem.quantity !== q;
+            const isSelected = selectedQuantity === q;
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.modalQuantityOption,
+                  isSelected && styles.modalQuantitySelected,
+                  isDisabled && { opacity: 0.5 },
+                ]}
+                onPress={() => !isDisabled && setSelectedQuantity(q)}
+                disabled={isDisabled}
+              >
+                <Text
+                  style={[
+                    styles.modalQuantityText,
+                    isSelected && styles.modalQuantityTextSelected,
+                  ]}
+                >
+                  {q}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+    
+    </View>
+  </View>
+</Modal>
+</>
   );
 };
 
@@ -391,6 +527,102 @@ productImage: {
     marginHorizontal: 3,
   },
   counterMiddle: { backgroundColor: COLORS.primary },
+ modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 20,
+},
+modalContent: {
+  backgroundColor: COLORS.white,
+  borderRadius: 14,
+  width: '100%',
+  maxHeight: '90%',
+  padding: 16,
+},
+modalCloseButton: {
+  alignSelf: 'flex-end',
+  marginBottom: 10,
+},
+modalImage: {
+  width: '100%',
+  height: 200,
+  borderRadius: 10,
+  resizeMode: 'cover',
+  marginBottom: 10,
+},
+modalProductName: {
+  fontSize: 18,
+  fontWeight: '700',
+  color: COLORS.textDark,
+  marginBottom: 5,
+},
+modalPrice: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: COLORS.primary,
+  marginBottom: 10,
+},
+modalDescriptionBox: {
+  backgroundColor: COLORS.light,
+  borderRadius: 8,
+  padding: 10,
+  marginBottom: 15,
+},
+modalDescriptionText: {
+  color: COLORS.textGray,
+  fontSize: 13,
+  marginBottom: 4,
+},
+modalQuantityContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  marginBottom: 15,
+},
+modalQuantityOption: {
+  paddingVertical: 5,
+  paddingHorizontal: 10,
+  backgroundColor: COLORS.light,
+  borderRadius: 6,
+  marginRight: 8,
+  marginBottom: 8,
+},
+modalQuantitySelected: {
+  backgroundColor: COLORS.primary,
+},
+modalQuantityText: {
+  color: COLORS.textGray,
+  fontSize: 13,
+},
+modalQuantityTextSelected: {
+  color: COLORS.white,
+  fontWeight: '600',
+},
+modalButtonsContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+},
+modalCartButton: {
+  flex: 1,
+  backgroundColor: COLORS.light,
+  padding: 10,
+  borderRadius: 8,
+  alignItems: 'center',
+  marginRight: 8,
+},
+modalSubscribeButton: {
+  flex: 1,
+  backgroundColor: COLORS.primary,
+  padding: 10,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+modalButtonText: {
+  color: COLORS.white,
+  fontWeight: '600',
+},
+
   counterText: { fontSize: 14, fontWeight: '700', color: COLORS.textGray },
 });
 
